@@ -6,7 +6,7 @@ library(esquisse)
 
 grouped_trial_id <- size_data %>% 
   group_by(trial_id) %>% 
-  summarize(avg_size= mean(size)) %>% 
+  summarize(avg_mass= mean(weight), avg_size= (mean(size))) %>%
   signif(digits=3)
 
 combined_data <- merge(grouped_trial_id, consumption_data, by="trial_id")
@@ -24,6 +24,16 @@ esquisse::esquisser(data = herbivory_rate)
 library(ggplot2)
 
 ggplot(data = herbivory_rate) +
+  aes(x = avg_size, y = avg_mass) +
+  geom_point(color = '#0c4c8a') +
+  geom_smooth(span = 0.75) +
+  labs(title = 'Relationship Between Urchin Size and Mass ',
+    x = 'Urchin Size (mm)',
+    y = 'Urchin Mass (g)') +
+  theme_minimal()
+library(ggplot2)
+
+ggplot(data = herbivory_rate) +
   aes(x = avg_size, y = herbivory_rates) +
   geom_point(color = '#0c4c8a') +
   geom_smooth(span = 0.5) +
@@ -31,13 +41,16 @@ ggplot(data = herbivory_rate) +
     x = 'Urchin Size (mm)',
     y = 'Herbivory Rate (kelp consumed/hour)') +
   theme_stata()
+
+esquisse::esquisser(data = herbivory_rate)
 library(ggplot2)
 
 ggplot(data = herbivory_rate) +
-  aes(x = avg_size, y = herbivory_rates) +
-  geom_smooth(method = "lm")+
+  aes(x = avg_mass, y = herbivory_rates) +
   geom_point(color = '#0c4c8a') +
-  labs(title = 'Size Dependent Rates of Purple Urchin Herbivory on Giant Kelp',
-    x = 'Urchin Size (mm)',
-    y = 'Herbivory Rate (kelp consumed/hour)')
+  geom_smooth(method = "lm")+
+  labs(title = 'Mass Dependent Herbivory Rates of Pruple Urchins on Giant Kelp ',
+    x = 'Urchin Mass (g)',
+    y = 'Herbivory Rate (kelp consumed (g)/ hour)') +
+  theme_minimal()
 
