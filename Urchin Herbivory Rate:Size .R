@@ -54,3 +54,7 @@ ggplot(data = herbivory_rate) +
     y = 'Herbivory Rate (kelp consumed (g)/ hour)') +
   theme_minimal()
 
+read.csv()
+
+
+
