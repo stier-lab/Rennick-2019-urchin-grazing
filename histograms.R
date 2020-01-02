@@ -68,7 +68,7 @@ names(lt) <- tolower(names(lt))
 
 dh.d <- ggplot(lt, aes(x = (density+1)))+
   geom_density(aes(fill = common_name), alpha = 0.75)+
-  scale_x_continuous(trans=log10_trans())+
+  scale_x_continuous(trans=scales::log10_trans())+
   scale_fill_manual(values = c("#762a83", "#d73027"))+
   labs(x = "Urchin density (ind./m2)", y = "Density", fill = "", title = "Urchin density" )+
   theme_pubclean()
