@@ -9,7 +9,7 @@ df <-read.csv("data/density_experiment/derived/urchin_density_data_cleaned.csv")
           abundance = urchin_density, 
           urchin_density = NULL) %>% 
   group_by(trial_id) %>%
-  mutate(biomass= sum(urchin_mass), 
+  mutate(biomass= sum(urchin_mass)/1.587165, # this is the surface area in the tanks 
          urchin_size = NULL, 
          urchin_mass = NULL) %>%
   distinct()
@@ -26,24 +26,40 @@ ggplot(df, aes(x = biomass, y = herbivory_rate))+
 
 pf <- df[df$type == "p", ]
 
-lm1 <- lm(herbivory_rate ~ biomass, pf)
+lm1 <- lm(herbivory_rate ~ 0 + biomass, pf)
 summary(lm1)
+
 exp1 <- lm(herbivory_rate ~ biomass + I(biomass^2), pf)
 summary(exp1)
+
+pow1 <- lm(log(herbivory_rate+1) ~ log(biomass), pf) # this is fine but need to fit untransformed so that I can use AIC
+summary(pow1)
 
 pred <- data.frame(biomass = seq(min(pf$biomass), max(pf$biomass), length.out = 1000))
 pred$lm <- predict(lm1, newdata = pred)
 pred$exp1 <- predict(exp1, newdata = pred)
+pred$pow1 <- predict(pow1, newdat = pred)
 
-sig <- nls2::nls2(herbivory_rate ~ (biomass^(1+q) * a) / (1 + a*h*biomass^(1+q)), data = pf, start = list(a = 0.1, h = 1.5, q = 0), algorithm = "port") # coulnd't get this parameterization to work
-summary(sig) 
+pow2 <- nls(herbivory_rate ~ a*(biomass^b), data = pf, start = list(a = exp(-1.377), b = 0.29))
+summary(pow2)
+
+
+# sig <- nls2::nls2(herbivory_rate ~ (biomass^(1+q) * a) / (1 + a*h*biomass^(1+q)), data = pf, start = list(a = 0.1, h = 1.5, q = 0), algorithm = "port") # coulnd't get this parameterization to work
+# summary(sig) 
 
 sig <- nls(herbivory_rate ~ (a * biomass^2) / (b^2 + biomass^2), data = pf, start = list(a = 10, b = 1000)) # this is an alternative parameterization based on Bolker et al. 2008, bestiary of functions p. 22. "a" is similar to handling time, and b is similar to attack rate in this parameterization.
-
 summary(sig)
 pred$sig <- predict(sig, newdata = pred)
 
-AIC(lm1, exp1, sig)
+
+
+fit <- nls(herbivory_rate ~ (a*(kelp_in_total/1.587165)*(biomass^(-1*m))), data = pf, list(a = 0.02, m = 1)) # this is a form based on Arditi-Akcakaya model that includes resource density and consumer biomass. Supposedly negative values of m suggest facilitation in consumption by consumers...
+summary(fit)
+pred2 <- data.frame(kelp_in_total = 250/1.587165, biomass = seq(min(pf$biomass), max(pf$biomass), length.out = 1000))
+pred2$fit <- predict(fit, newdata = pred2)
+
+
+AIC(lm1, exp1, pow2, sig, fit)
 # So it seems that there is no evidence for any differences between curves.
 
 ggplot(pf, aes(x = biomass, y = herbivory_rate))+
@@ -51,9 +67,14 @@ ggplot(pf, aes(x = biomass, y = herbivory_rate))+
   geom_line(data = pred, aes(x = biomass, y = lm), color = "red")+
   geom_line(data = pred, aes(x = biomass, y = exp1), color = "blue")+
   geom_line(data = pred, aes(x = biomass, y = sig), color = "green")+
+  geom_line(data = pred2, aes(x = biomass, y = fit), color = "black")+
   geom_vline(xintercept = coef(sig)[2], lty = "dashed")+
   ggpubr::theme_pubclean()
 
+
+ggplot(pf, aes(x = abundance, y = herbivory_rate/abundance))+
+  geom_point()+
+  geom_smooth(method = "lm")
 
 # does the same pattern apply with abundance (not biomass)
 
@@ -123,8 +144,9 @@ ggplot(my.model, aes(x = biomass, y = herb)) + geom_line()+
 rf <- df[df$type == "r", ]
 
 
-lm1 <- lm(herbivory_rate ~ biomass, rf)
+lm1 <- lm(herbivory_rate ~ 0 + biomass, rf)
 summary(lm1)
+
 exp1 <- lm(herbivory_rate ~ biomass + I(biomass^2), rf)
 summary(exp1)
 
@@ -173,7 +195,7 @@ fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
   #scale_color_manual(c("#0B61A4", "#FF9200"))+
   facet_wrap(~sp)+
   ggpubr::theme_pubclean()+
-  labs(x = "Urchin biomass (g)", y = expression(paste("Herbivory rate (g h"^"-1"*")")), color = "", linetype = "")+
+  labs(x = expression(paste("Urchin biomass density (g m"^"-2"*")")), y = expression(paste("Herbivory rate (g h"^"-1"*")")), color = "", linetype = "")+
   theme(strip.background = element_blank())
   
 ggsave("figures/herbivoryXdensity_fig2.png", fig2, device = "png")
