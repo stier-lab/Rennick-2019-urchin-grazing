@@ -42,8 +42,8 @@ df <- bind_rows(pf, rf) %>%
   group_by(id, sp, abundance, kelp_in, kelp_out, use, round, time_ran) %>%
   summarize(mean.size = mean(size), 
             biomass = sum(weight)) %>%
-  mutate(herbivory_rate = (kelp_in - kelp_out)/time_ran) %>%
-  filter(time_ran == 48)
+  mutate(herbivory_rate = ((kelp_in - kelp_out)/time_ran)*24) %>%
+  filter(time_ran == 48, use == 1)
 
 # --------------------------------------------------------------------------------------------------
 ## Modeling and visulization
@@ -82,7 +82,7 @@ r <- df[df$sp == "r", ]
 lm2 <- lm(herbivory_rate ~ mean.size + round, data = r)
 summary(lm2)
 
-exp2 <- lm(herbivory_rate ~ mean.size + I(mean.size^2) * round, data = r)
+exp2 <- lm(herbivory_rate ~ (mean.size + I(mean.size^2)) * round, data = r)
 summary(exp2)
 
 exp3 <- lm(herbivory_rate ~ mean.size + I(mean.size^2), data = r)
@@ -130,7 +130,7 @@ fig3 <- ggplot(df, aes(x = mean.size, y = herbivory_rate))+
   geom_line(data = newdat, aes(x = mean.size, y = pred))+
   facet_wrap(~sp, scales = "free_x")+
   ggpubr::theme_pubclean()+
-  labs(x = "Mean test diameter (mm)", y = expression(paste("Herbivory rate (g h"^"-1"*")")), color = "", linetype = "")+
+  labs(x = "Mean test diameter (mm)", y = expression(paste("Herbivory rate (g m"^"-2"*"d"^"-1"*")")), color = "", linetype = "")+
   theme(strip.background = element_blank())
 
 ggsave("figures/herbivoryXsize_fig3.png", fig3, device = "png")

@@ -1,11 +1,14 @@
+library(here)
 library(tidyverse)
+source(here("analysis", "Functions.R"))
+library(car)
 # ------------------------------------------------------------------------------------------------
 ## Set up and visualization
 # ------------------------------------------------------------------------------------------------
 
 df <-read.csv("data/density_experiment/derived/urchin_density_data_cleaned.csv") %>% 
   mutate(kelp_consumed = kelp_in_total-Kelp_out_total) %>% 
-  mutate (herbivory_rate = kelp_consumed/total_time, 
+  mutate (herbivory_rate = (kelp_consumed/total_time)*24, 
           abundance = urchin_density, 
           urchin_density = NULL) %>% 
   group_by(trial_id) %>%
@@ -28,11 +31,15 @@ pf <- df[df$type == "p", ]
 
 lm1 <- lm(herbivory_rate ~ 0 + biomass, pf)
 summary(lm1)
+modelassump(lm1) # evidence of heteroscedasticity in the resituals... not quite sure what to do about this...
+rsq.noint <- 1-mean((pf$herbivory_rate-lm1$fit)^2) / mean(pf$herbivory_rate^2)
 
-exp1 <- lm(herbivory_rate ~ biomass + I(biomass^2), pf)
+
+
+exp1 <- lm(herbivory_rate ~  0 + biomass + I(biomass^2), pf)
 summary(exp1)
 
-pow1 <- lm(log(herbivory_rate+1) ~ log(biomass), pf) # this is fine but need to fit untransformed so that I can use AIC
+pow1 <- lm(log(herbivory_rate+1) ~ 0 + log(biomass), pf) # this is fine but need to fit untransformed so that I can use AIC
 summary(pow1)
 
 pred <- data.frame(biomass = seq(min(pf$biomass), max(pf$biomass), length.out = 1000))
@@ -113,6 +120,7 @@ ggplot(pf, aes(x = abundance, y = herbivory_rate))+
 
 lm1 <- lm(herbivory_rate ~ biomass, pf)
 summary(lm1)
+library(segmented)
 
 # my.seg <- segmented(lm1, 
 #                     seg.Z = ~ biomass, 
@@ -146,6 +154,7 @@ rf <- df[df$type == "r", ]
 
 lm1 <- lm(herbivory_rate ~ 0 + biomass, rf)
 summary(lm1)
+modelassump(lm1)
 
 exp1 <- lm(herbivory_rate ~ biomass + I(biomass^2), rf)
 summary(exp1)
@@ -180,7 +189,7 @@ ggplot(rf, aes(x = biomass, y = herbivory_rate))+
 temp1 <- pred %>% gather(model, prediction, -biomass) %>% mutate(sp = "Purple urchin")
 temp2 <- pred3 %>% gather(model, prediction, -biomass) %>% mutate(sp = "Red urchin")
 
-gg <- bind_rows(temp1, temp2) %>% filter(model != "exp1")
+gg <- bind_rows(temp1, temp2) %>% filter(model != "exp1", model != "pow1")
 gg$Model <- ifelse(gg$model == "lm", "Linear", "Sigmoid")
 df$sp <- ifelse(df$type == "p", "Purple urchin", "Red urchin")
 
@@ -195,18 +204,59 @@ fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
   #scale_color_manual(c("#0B61A4", "#FF9200"))+
   facet_wrap(~sp)+
   ggpubr::theme_pubclean()+
-  labs(x = expression(paste("Urchin biomass density (g m"^"-2"*")")), y = expression(paste("Herbivory rate (g h"^"-1"*")")), color = "", linetype = "")+
+  labs(x = expression(paste("Urchin biomass density (g m"^"-2"*")")), y = expression(paste("Herbivory rate (g m"^"-2"*"d"^"-1"*")")), color = "", linetype = "")+
   theme(strip.background = element_blank())
   
 ggsave("figures/herbivoryXdensity_fig2.png", fig2, device = "png")
 
 
+########################
+## Summary stats 
+########################
+
+predict(lm1, newdata = list(biomass = 668), se.fit = T)
+
+#------------------------------------------------
+# Supplemental figure 1
+#-----------------------------------------------
+
+pf$con_per_g_biomass <- pf$herbivory_rate / pf$biomass
+
+s1 <- lm(con_per_g_biomass ~ biomass, pf)
+summary(s1)
+modelassump(s1)
 
 
+rf$con_per_g_biomass <- rf$herbivory_rate / rf$biomass
 
+s2 <- lm(con_per_g_biomass ~ biomass, rf)
+summary(s2)
+modelassump(s2)
 
+plot(con_per_g_biomass ~ biomass, pf)
+plot(con_per_g_biomass ~ biomass, rf)
 
+gg <- data.frame(biomass = seq(0, max(df$biomass, na.rm = T), length.out = 1000))
+gg$`Purple urchin` <- predict(s1, newdata = gg)
+gg$`Red urchin` <- predict(s2, newdata = gg)
 
+gg <- gg %>% gather(sp, prediction, -biomass)
+
+df$con_per_g_biomass <- df$herbivory_rate / df$biomass
+
+S1 <- ggplot(df, aes(x = biomass, y = con_per_g_biomass))+
+  geom_jitter(aes(fill = sp), pch = 21, show.legend = F)+
+  scale_fill_manual(values = c("#762a83", "#d73027"))+
+  #geom_line(data = gg, aes(x = biomass, y = prediction))+
+  #scale_color_manual(c("#0B61A4", "#FF9200"))+
+  facet_wrap(~sp)+
+  labs(x = expression(paste("Urchin biomass density (g m"^"-2"*")")), 
+       y = expression(paste("Herbivory rate (g"["kelp"]*"g"["urc"]^"-1"*"m"^"-2"*"d"^"-1"*")")), 
+       color = "", linetype = "")+
+  ggpubr::theme_pubclean()+
+  theme(strip.background = element_blank())
+
+ggsave(here("figures", "percapconsumption x biomass.png"), S1, device = "png", width = 6.5, height = 4)
 
 
 
