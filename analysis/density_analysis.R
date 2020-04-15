@@ -23,6 +23,8 @@ ggplot(df, aes(x = biomass, y = herbivory_rate))+
   facet_wrap(~type)+
   ggpubr::theme_pubclean()
 
+
+
 # ------------------------------------------------------------------------------------------------
 ## Purple Analaysis
 # ------------------------------------------------------------------------------------------------
@@ -257,6 +259,26 @@ S1 <- ggplot(df, aes(x = biomass, y = con_per_g_biomass))+
   theme(strip.background = element_blank())
 
 ggsave(here("figures", "percapconsumption x biomass.png"), S1, device = "png", width = 6.5, height = 4)
+
+#----------------------------------------
+# Figure for hunter lenihan talk
+#----------------------------------------
+hl <- ggplot(pf, aes(x = biomass, y = herbivory_rate))+
+  geom_jitter(fill = "#762a83",  pch = 21, show.legend = F)+
+  geom_smooth(method = "lm", color = "black")+
+  ggpubr::theme_pubclean()+
+  labs(x = expression(paste("Urchin biomass density (g m"^"-2"*")")), y = expression(paste("Herbivory rate (g m"^"-2"*"d"^"-1"*")")), color = "", linetype = "")+
+  theme(strip.background = element_blank())
+
+ggsave(here("figures", "hunter-talk.png"), hl, device = "png", width = 5, height = 3.8)
+
+
+
+
+
+
+
+
 
 
 
