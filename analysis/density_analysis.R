@@ -2,6 +2,9 @@
 ##Density Analysis
 #############################################################################################################
 
+## Mae Rennick and Bart DiFiore
+## Urchin Density Data
+
 library(here)
 library(tidyverse)
 source(here("analysis", "Functions.R"))
@@ -11,7 +14,7 @@ library(car)
 ## Set up and visualization
 # ------------------------------------------------------------------------------------------------
 
-df <- read.csv("data/density_experiment/derived/urchin_density_data_cleaned.csv") %>% #cleaned data from density dependent urchin herbivory lab trials for red and purple urhcins. Two trials of 6 densities tested for red urchins with two replicates of each. Two trials of 8 densities tested for purple urchins with two replicates of each.
+df <- read.csv("data/density_experiment/derived/urchin_density_data_cleaned.csv") %>% #cleaned data from density dependent urchin herbivory lab trials for red and purple urhcins. Two trials of 5 sizes densities tested for red urchins with two replicates of each. Two trials of 8 densities tested for purple urchins with two replicates of each.
   mutate(kelp_consumed = kelp_in_total-Kelp_out_total) %>% 
   mutate (herbivory_rate = (kelp_consumed/total_time)*24, 
           abundance = urchin_density, 
