@@ -97,7 +97,7 @@ anova(exp3, exp2)
 
   # the exponential function predicts values less than zero, which is biologically impossible. So I"m going to test the fit of a ricker function. Ricker functions are commonly used as phenomenological models to describe ecological data that is non-negative, increase from zero to a peak and then decline to zero. 
 
-# y ~ a*x*exp(-b*x) #can you explain to me what this equation means? 
+# y ~ a*x*exp(-b*x) #Bart- can you explain to me what this equation means? 
 
 ric <- nls(herbivory_rate ~ a * mean.size * exp(-1 * b * mean.size), data = r, start = list(a = 0.006, b = 1/50)) #where did you get the a be and x values from? 
 summary(ric)

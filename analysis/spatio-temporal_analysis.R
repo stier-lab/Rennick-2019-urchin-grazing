@@ -9,13 +9,13 @@ library(ggplot2)
 library(lmer)
 library(lmerTest)
 source(here("analysis", "Functions.R"))
-library(car)
+library(car) #this isnt on the other one. What does this package do? 
 
-lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>%
+lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER data density estimations collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel.
   dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "PERCENT_COVER", "DENSITY", "WM_GM2", "DRY_GM2", "SCIENTIFIC_NAME", "COMMON_NAME", "GROUP", "MOBILITY", "GROWTH_MORPH", "COARSE_GROUPING" ) %>%
   mutate(id = paste(SITE, TRANSECT, sep = "")) %>%
   filter(COMMON_NAME == "Purple Urchin" | COMMON_NAME == "Red Urchin" | COMMON_NAME == "Giant Kelp")%>%
-  filter(SITE != "SCTW", SITE != "SCDI")
+  filter(SITE != "SCTW", SITE != "SCDI") #Filtering out island sites. This study focuses on costal sites. 
 
 names(lt) <- tolower(names(lt))
 

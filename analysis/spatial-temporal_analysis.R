@@ -10,59 +10,56 @@ library(lmer)
 library(lmerTest)
 source(here("analysis", "Functions.R"))
 
-lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>%
+lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER data density estimations collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel.
   dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "PERCENT_COVER", "DENSITY", "WM_GM2", "DRY_GM2", "SCIENTIFIC_NAME", "COMMON_NAME", "GROUP", "MOBILITY", "GROWTH_MORPH", "COARSE_GROUPING" ) %>%
   mutate(id = paste(SITE, TRANSECT, sep = "")) %>%
-  filter(COMMON_NAME == "Purple Urchin" | COMMON_NAME == "Red Urchin" | COMMON_NAME == "Giant Kelp")%>%
-  filter(SITE != "SCTW", SITE != "SCDI")
+  filter(COMMON_NAME == "Purple Urchin" | COMMON_NAME == "Red Urchin" | COMMON_NAME == "Giant Kelp")%>% #filtering the data to only include giant kelp, purple urchins, and red urchins
+  filter(SITE != "SCTW", SITE != "SCDI") #removing the two island sites. This study narrows in on coastal sites in the Santa Barbara Channel
 
 names(lt) <- tolower(names(lt))
 
-sites <- read.csv(here("data/spatial", "lter_waypoints.csv")) 
+sites <- read.csv(here("data/spatial", "lter_waypoints.csv")) #locations on the transects across all 9 sites #whya re there only 49 transects? Did I calculate them wrong in the original data? #how would I code that to check? 
 
 purple.fun <- function(biomass){
-  0.0009784*biomass
+  0.0009784*biomass #is this the model we got from the size analysis? WHy is there and extra little backwards bracket at the end?
 }
 
 red.fun <- function(biomass){
   0.0003767*biomass
 }
 
-mp <- lt %>% as_tibble() %>%
+mp <- lt %>% as_tibble() %>% #what does mp stand for? Not important, but it will help me follow this 
   mutate(predited.consumption = ifelse(sp_code == "SPL", purple.fun(wm_gm2), 
-                                            ifelse(sp_code == "SFL", red.fun(wm_gm2), NA))) %>%
-  left_join(sites)
-
-
+                                       ifelse(sp_code == "SFL", red.fun(wm_gm2), NA))) %>% #Why does this get indented?
+  left_join(sites) #so many questions about what this is. Are you adding the predicted consumption at all of these sites based on their reported desnity using the red  and purple function? what is wm? wet mass? How did you convert that from dry mass that we used in the lab to make teh caluclations? - explain the units (please :) )
 
 
 
 
 #-----------------------------------------------------------------
-## Make the map
+## Make the map 
 
 library(rgdal)
 library(rgeos)
 library(sp)
 library(raster)
 
-coordinates(mp) <- ~long + lat
+coordinates(mp) <- ~long + lat #does adding lat and long goether like this just extract them from the mp dataset? without adding them? Is that what the tilda does? 
 
-proj4string(mp) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
+proj4string(mp) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0" #what is this? 
 
 
+cal <- readOGR(here("data/spatial", "caloutline.shp")) #what is a formal class spatial polygons data frame? Does teh california outline already exist in code world and you are just summoning it? 
+all_mpas <- readOGR(here("data/spatial", "state_mpas.shp")) #Why do you need additional state maps? Is that what this is?
 
-cal <- readOGR(here("data/spatial", "caloutline.shp"))
-all_mpas <- readOGR(here("data/spatial", "state_mpas.shp"))
+d <- par(las = 1, mgp = c(3, 0.75, 0)) #what is mgp? and las? and par? basically the whole line of code. 
+plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE) # cal state # what is FFEB9B? February? Why? 
+plot(all_mpas, pch = 4, col = "#99ebff", add = T) #Outlining MPAs.what is 99ebff? Where are you getting these codes from? 
+plot(mp, pch = 21, cex = mp$predited.consumption*5, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .5)) #mapping projected consumption rate coastally? 
 
-d <- par(las = 1, mgp = c(3, 0.75, 0))
-plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE) # cal state
-plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
-plot(mp, pch = 21, cex = mp$predited.consumption*5, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .5))
+par(d) #what is par()? 
 
-par(d)
-
-# Make a plot for each year...
+# Make a plot for each year... 
 for(i in 2002:2018){
   myfile <- file.path("figures/", paste("year", "_", i, ".png"))
   png(myfile, width = 1000*3, height = 561*3, res = 300)
@@ -72,64 +69,66 @@ for(i in 2002:2018){
   plot(mp[mp$year == i,], pch = 21, cex = mp$predited.consumption[mp$year == i]*5, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .25))
   par(d)
   dev.off()
-}
+} #what does this produce? I cant find it.
 
 
 # Make a time averaged plot...
 
 av <- mp@data %>% 
-  mutate(group = cut(year, breaks = 4, labels = FALSE)) %>%
+  mutate(group = cut(year, breaks = 4, labels = FALSE)) %>% #what does cut do? 
   group_by(site, transect, group) %>%
   summarize(predicted.consumption = mean(predited.consumption, na.rm = T)) %>%
-  left_join(sites)
+  left_join(sites) #average consumption rate per site
 
 coordinates(av) <- ~long + lat
 
-proj4string(av) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
+proj4string(av) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0" #what is this? 
 
 #c(bottom, left, top, right)
 id <- c("2000-2004", "2005-2009", "2010-2013", "2014-2018")
 
-png(here("figures", "map.png"), width = 1000*1.2, 600*1.2)
+png(here("figures", "map.png"), width = 1000*1.2, 600*1.2) #are you uploading or creating a png file? 
 d <- par(mfrow = c(2, 2), las = 1, mgp = c(3, 0.75, 0), mar = c(3,5, 1.5, 0.5))
-for(i in 1:4){
+for(i in 1:4){ #what is las, mgp, mar, and mfrow?
 plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE, main = paste(id[i])) # cal state
-plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
+plot(all_mpas, pch = 4, col = "#99ebff", add = T) #error: Plot. new has not been called yet 
 plot(av[av$group == i, ], pch = 21, cex = av$predicted.consumption[av$group == i]*10, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .5))
-}
-par(d)
-dev.off()
+} #cant see the plot
+par(d) #aparameters of d
+dev.off() #what is a device? Why do you need to shut it off?
 
 # time series
 
-p1 <- mp@data %>% 
-  filter(sp_code == "MAPY") %>%
+p1 <- mp@data %>% #LTER data 
+  filter(sp_code == "MAPY") %>% #filtering for macrocystis pyrifera 
   group_by(year, site) %>%
-  mutate(biomass = mean(wm_gm2, na.rm = T))%>%
+  mutate(biomass = mean(wm_gm2, na.rm = T))%>% #adding a biomass column wet biomass 
   ggplot(aes(x = year, y = biomass))+
   geom_line(aes(color = site))+
-  ggpubr::theme_pubr(legend = "right")
+  ggpubr::theme_pubr(legend = "right") #I cant view(p1)
 
-p3 <- mp@data %>% group_by(year, site, sp_code) %>%
-  summarize(predicted.consumption = mean(predited.consumption)) %>%
-  ungroup() %>%
-  filter(sp_code != "MAPY") %>%
+p3 <- mp@data %>% group_by(year, site, sp_code) %>% #where is p2? 
+  summarize(predicted.consumption = mean(predited.consumption)) %>% 
+  ungroup() %>% #what are you ungrouping year and ite from earlier? 
+  filter(sp_code != "MAPY") %>% #get rid of MAPY
   group_by(year, site) %>%
   mutate(predicted.consumption = sum(predicted.consumption, na.rm = T)*24)%>% # convert to per day rather than per hour
-  ggplot(aes(x = year, y = predicted.consumption))+
+ggplot(aes(x = year, y = predicted.consumption))+ #you can just throw a ggplot in at the end? interesting.
     geom_line(aes(color = site))+
-    ggpubr::theme_pubr(legend = "right")
+    ggpubr::theme_pubr(legend = "right") #cant see the plot 
 
-fig4 <- cowplot::plot_grid(p1, p3, align = "v", nrow = 2)
+fig4 <- cowplot::plot_grid(p1, p3, align = "v", nrow = 2) #cant see the plot. bunch of warning messages
 
 ggsave(here("figures", "timeseries.png"), fig4)
 
 
-# Ok so idea: Part of what is complicated about urchin foraging is that they can be both detritovors and herbivores. if production of kelp detritus exceeds consumption rate then we wouldn't expect any change in standing stock of kelp biomass. BUT if consumption rate exceeds detritus production then we might see shifts in the standing stock of kelp. Based on Christie's paper (and some analysis of LTER data) we should be able to estimate summer production of kelp detritus (and spectifically the detritus that lands on the seafloor). We can then examine trends in the time series to look for periods when urchin consumption rate exceeds kelp detritus production to look for declines in kelp biomass.
+# Ok so idea: Part of what is complicated about urchin foraging is that they can be both detritovors and herbivores. if production of kelp detritus exceeds consumption rate then we wouldn't expect any change in standing stock of kelp biomass. BUT if consumption rate exceeds detritus production then we might see shifts in the standing stock of kelp. Based on Christie's paper (and some analysis of LTER data) we should be able to estimate summer production of kelp detritus (and specifically the detritus that lands on the seafloor). We can then examine trends in the time series to look for periods when urchin consumption rate exceeds kelp detritus production to look for declines in kelp biomass.
 
 # The NPP survey data includes an estimate of average % biomass lost on a NPP transect for each monthly survey as plants, fronds, exudates, cut tissue (i.e. prop cuts), and blade scenescence. I'm going to calculate a regional summer time average from the NPP data collected at MOHK, AQUE, and ABUR to estimate the fraction of kelp biomss lost as fronds and blades (mass per day). I will then use this estimate to estimate detrital production rates along each of the LTER core transects. 
 
-# get NPP data
+#why did you chose these sites specifically? 
+
+# get NPP data (what is NPP?)
 
 
 npp <- read.csv("data/survey_data/NPP_ALL_YEARS_seasonal_with_MC_stderr.csv", stringsAsFactors = F,na.strings ="-99999") %>%
@@ -139,13 +138,13 @@ npp <- read.csv("data/survey_data/NPP_ALL_YEARS_seasonal_with_MC_stderr.csv", st
   mutate(det.r = f + b)
 
 av <- npp %>% summarize(ave = mean(det.r, na.rm = T), 
-                        sd = sd(det.r, na.rm = T)) # so approximately 2% of total biomass is lost as fronds and blades per day!
-av <- av[1,1]
-sd <- av[1,2]
+                        sd = sd(det.r, na.rm = T)) # so approximately 2% of total biomass is lost as fronds and blades per day! #can you explain to me hoe you set this up?
+av <- av[1,1] #average? 
+sd <- av[1,2] #Standard deviation? Error: incorrect number of demensions? 
 
 lt <- lt %>% as_tibble() %>%
   dplyr::select(year, month, site, transect, sp_code, wm_gm2) %>%
-  spread(sp_code, wm_gm2) %>%
+  spread(sp_code, wm_gm2) %>% #it says sp_code doesnt exist (where is that?)
   mutate(SFL.pred = red.fun(SFL),
          SPL.pred = purple.fun(SPL), 
          predicted.consumption = (SPL.pred + SFL.pred)*24, 
@@ -155,13 +154,13 @@ lt <- lt %>% as_tibble() %>%
 
 
 ggplot(lt, aes(x = predicted.consumption, y = MAPY))+
-  geom_point(aes(size = detritus.production), pch = 21)
+  geom_point(aes(size = detritus.production), pch = 21) #This wont pop up for me, becuase lt doesnt exist? 
 
-lt <- lt %>% 
+lt <- lt %>% #why does this work if the earlier lt has an error attached to it? 
   drop_na(MAPY) %>%
-  mutate(dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
-         difference = detritus.production - predicted.consumption, 
-         urc = SPL + SFL)
+  mutate(dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), #why did you call this dummy?
+         difference = detritus.production - predicted.consumption, #difference being what should be left over? so if its negative that means that the urhins are eating more than is available in detritus by that much g/hr? Is that the unit? help.
+         urc = SPL + SFL) #this is the stuff I am starting to understand conceptually, but I dont understand it in enough detail to understand why you are coding it the way you are- if that makes any sense 
 
 
 # comparison of kelp biomass across all sites/years with kelp biomass at sites with urchin biomass in the 90% percentile
