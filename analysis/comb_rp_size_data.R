@@ -1,18 +1,18 @@
 ## Mae Rennick
 ## Urchin Size Data
 
-df_p1 <- read.csv("data/size_experiment/raw/Purple_size_data.csv")
+df_p1 <- read.csv("data/size_experiment/raw/Purple_size_data.csv") #raw size and mass data from the size trials
 
 df_p1 <- df_p1 %>% 
-  mutate(urchin = "p")
+  mutate(urchin = "p") 
 
 
 str(df_p)
 head(df_p)
 
-df_p2 <- read.csv("data/size_experiment/raw/Purple_consuption_data.csv")
+df_p2 <- read.csv("data/size_experiment/raw/Purple_consuption_data.csv") #raw experimental data from the herbivory trials (purple)
 
-df_p3 <-df_p2 %>%
+df_p3 <-df_p2 %>% #combined data set for purple urchins
   filter(urchin_size_cat != 'control') %>% 
   mutate(urchin = "p")%>% 
   left_join(df_p1) %>% 
@@ -41,4 +41,4 @@ df_r2 <-df_r %>%
   mutate (urchin= "r") %>% 
   mutate (use=1)
 
-df_rp <- rbind(df_r2,df_p3)
+df_rp <- rbind(df_r2,df_p3) #combined dataset for red urchins size trials
