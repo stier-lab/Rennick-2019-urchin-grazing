@@ -41,4 +41,4 @@ df_r2 <-df_r %>%
   mutate (urchin= "r") %>% 
   mutate (use=1)
 
-df_rp <- rbind(df_r2,df_p3) #combined dataset for red urchins size trials
+df_rp <- rbind(df_r2,df_p3) #combined dataset for red and purple urchins size trials
