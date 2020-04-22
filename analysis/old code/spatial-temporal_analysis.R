@@ -19,7 +19,7 @@ lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", st
 
 names(lt) <- tolower(names(lt))
 
-sites <- read.csv(here("data/spatial", "lter_waypoints.csv")) #locations on the transects across all 9 sites #why re there only 49 transects? Did I calculate them wrong in the original data? #how would I code that to check? 
+sites <- read.csv(here("data/spatial", "lter_waypoints.csv")) #locations on the transects across all 9 sites 
 
 purple.fun <- function(biomass){
   0.0009784*biomass #is this the model we got from the size analysis? WHy is there and extra little backwards bracket at the end? CHECK THESE PREDICTIONS 
@@ -29,10 +29,10 @@ red.fun <- function(biomass){
   0.0003767*biomass
 }
 
-mp <- lt %>% as_tibble() %>% #what does mp stand for? Not important, but it will help me follow this 
+mp <- lt %>% as_tibble() %>% 
   mutate(predited.consumption = ifelse(sp_code == "SPL", purple.fun(wm_gm2), 
-                                       ifelse(sp_code == "SFL", red.fun(wm_gm2), NA))) %>% #Why does this get indented?
-  left_join(sites) #so many questions about what this is. Are you adding the predicted consumption at all of these sites based on their reported desnity using the red  and purple function? what is wm? wet mass? How did you convert that from dry mass that we used in the lab to make teh caluclations? - explain the units (please :) )
+                                       ifelse(sp_code == "SFL", red.fun(wm_gm2), NA))) %>% 
+  left_join(sites) 
 
 
 
@@ -106,7 +106,7 @@ p1 <- mp@data %>% #LTER data
   mutate(biomass = mean(wm_gm2, na.rm = T))%>% #adding a biomass column wet biomass 
   ggplot(aes(x = year, y = biomass))+
   geom_line(aes(color = site))+
-  ggpubr::theme_pubr(legend = "right") #I cant view(p1)
+  ggpubr::theme_pubr(legend = "right") 
 
 p3 <- mp@data %>% group_by(year, site, sp_code) %>% #where is p2? 
   summarize(predicted.consumption = mean(predited.consumption)) %>% 
@@ -114,11 +114,11 @@ p3 <- mp@data %>% group_by(year, site, sp_code) %>% #where is p2?
   filter(sp_code != "MAPY") %>% #get rid of MAPY
   group_by(year, site) %>%
   mutate(predicted.consumption = sum(predicted.consumption, na.rm = T)*24)%>% # convert to per day rather than per hour
-ggplot(aes(x = year, y = predicted.consumption))+ #you can just throw a ggplot in at the end? interesting. #average consumption across sites 
+ggplot(aes(x = year, y = predicted.consumption))+ #average consumption across sites 
     geom_line(aes(color = site))+
-    ggpubr::theme_pubr(legend = "right") #cant see the plot 
+    ggpubr::theme_pubr(legend = "right") 
 
-fig4 <- cowplot::plot_grid(p1, p3, align = "v", nrow = 2) #cant see the plot. bunch of warning messages
+fig4 <- cowplot::plot_grid(p1, p3, align = "v", nrow = 2) 
 
 ggsave(here("figures", "timeseries.png"), fig4)
 
@@ -134,14 +134,14 @@ ggsave(here("figures", "timeseries.png"), fig4)
 
 npp <- read.csv("data/survey_data/NPP_ALL_YEARS_seasonal_with_MC_stderr.csv", stringsAsFactors = F,na.strings ="-99999") %>%
   rename_all(tolower) %>%
-  dplyr::select(year, season, site, plnt_dns, frnd_dns, dry_wt,f, p, d, c, b, l) %>% #metadata LTER - why did Bart chose these ones? 
+  dplyr::select(year, season, site, plnt_dns, frnd_dns, dry_wt,f, p, d, c, b, l) %>% 
   filter(season == "3-Summer") %>%
   mutate(det.r = f + b)
 
 av1 <- npp %>% summarize(ave = mean(det.r, na.rm = T), 
                         sd = sd(det.r, na.rm = T)) # so approximately 2% of total biomass is lost as fronds and blades per day! #can you explain to me hoe you set this up?
-av <- av1[1,1] #average? 
-sd <- av1[1,2] #Standard deviation? Error: incorrect number of demensions? 
+av <- av1[1,1] #average?
+sd <- av1[1,2] #Standard deviation
 
 lt <- lt %>% as_tibble() %>%
   dplyr::select(year, month, site, transect, sp_code, wm_gm2) %>%
@@ -154,13 +154,13 @@ lt <- lt %>% as_tibble() %>%
 
 
 ggplot(lt, aes(x = predicted.consumption, y = MAPY))+
-  geom_point(aes(size = detritus.production), pch = 21) #This wont pop up for me, becuase lt doesnt exist? 
+  geom_point(aes(size = detritus.production), pch = 21) 
 
-lt <- lt %>% #why does this work if the earlier lt has an error attached to it? 
+lt <- lt %>% 
   drop_na(MAPY) %>%
-  mutate(dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), #why did you call this dummy?
-         difference = detritus.production - predicted.consumption, #difference being what should be left over? so if its negative that means that the urhins are eating more than is available in detritus by that much g/hr? Is that the unit? help.
-         urc = SPL + SFL) #this is the stuff I am starting to understand conceptually, but I dont understand it in enough detail to understand why you are coding it the way you are- if that makes any sense 
+  mutate(dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
+         difference = detritus.production - predicted.consumption, #if its negative that means that the urhins are eating more than is available in detritus by that much g/hr? 
+         urc = SPL + SFL) 
 
 
 # comparison of kelp biomass across all sites/years with kelp biomass at sites with urchin biomass in the 90% percentile
