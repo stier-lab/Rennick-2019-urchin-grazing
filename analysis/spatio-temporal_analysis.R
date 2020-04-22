@@ -9,12 +9,16 @@ library(ggplot2)
 library(lmer)
 library(lmerTest)
 source(here("analysis", "Functions.R"))
-library(car) #this isnt on the other one. What does this package do? 
+library(car) 
+source(here("analysis", "Functions.R"))
+#source(here("analysis", "Functions.R")) linked to exp analysis so we can extract model predicitons
+
+#We are going to apply the models extracted from the size and density analysis to 9 LTER coastal sites. We are going to track urchin density through time and apply herbivory pressure estiamtes to each site based on our findings. We additionally are incoorperating observational data realting to detriatal supply to test its bearing on the amount of kelp biomass lost in a given area. 
 
 lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER data density estimations collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel.
   dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "PERCENT_COVER", "DENSITY", "WM_GM2", "DRY_GM2", "SCIENTIFIC_NAME", "COMMON_NAME", "GROUP", "MOBILITY", "GROWTH_MORPH", "COARSE_GROUPING" ) %>%
   mutate(id = paste(SITE, TRANSECT, sep = "")) %>%
-  filter(COMMON_NAME == "Purple Urchin" | COMMON_NAME == "Red Urchin" | COMMON_NAME == "Giant Kelp")%>%
+  filter(COMMON_NAME == "Purple Urchin" | COMMON_NAME == "Red Urchin" | COMMON_NAME == "Giant Kelp")%>% #filtering the data to only include giant kelp, purple urchins, and red urchins
   filter(SITE != "SCTW", SITE != "SCDI") #Filtering out island sites. This study focuses on costal sites. 
 
 names(lt) <- tolower(names(lt))
@@ -23,11 +27,11 @@ sites <- read.csv(here("data/spatial", "lter_waypoints.csv"))
 
 purple.fun <- function(biomass){
   0.023482*biomass
-}
+} # this is the herbivory rate model prediction formed from the density analysis for purple urchins
 
 red.fun <- function(biomass){
   0.009042*biomass
-}
+} # this is the herbivory rate model prediction formed from the density analysis for red urchins
 
 #-----------------------------------------------------------------
 ## Make the map
@@ -40,7 +44,7 @@ library(raster)
 mp <- lt %>% as_tibble() %>%
   mutate(predited.consumption = ifelse(sp_code == "SPL", purple.fun(wm_gm2), 
                                        ifelse(sp_code == "SFL", red.fun(wm_gm2), NA))) %>%
-  left_join(sites)
+  left_join(sites) #Adding in the long lat data to the LTER density data
 
 
 coordinates(mp) <- ~long + lat
@@ -104,10 +108,10 @@ dev.off()
 
 # time series
 
-p1 <- mp@data %>% 
-  filter(sp_code == "MAPY") %>%
+p1 <- mp@data %>% #LTER data 
+  filter(sp_code == "MAPY") %>% #filtering for macrocystis pyrifera 
   group_by(year, site) %>%
-  mutate(biomass = mean(wm_gm2, na.rm = T))%>%
+  mutate(biomass = mean(wm_gm2, na.rm = T))%>% #adding a biomass column
   ggplot(aes(x = year, y = biomass))+
   geom_line(aes(color = site))+
   labs(y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), x = "")+
@@ -118,8 +122,8 @@ p3 <- mp@data %>% group_by(year, site, sp_code) %>%
   ungroup() %>%
   filter(sp_code != "MAPY") %>%
   group_by(year, site) %>%
-  mutate(predicted.consumption = sum(predicted.consumption, na.rm = T))%>% # convert to per day rather than per hour
-  ggplot(aes(x = year, y = predicted.consumption))+
+  mutate(predicted.consumption = sum(predicted.consumption, na.rm = T))%>% # convert to per day rather than per hour? Why didnt you add = T)*24)%>% like in the spatial analysis? 
+  ggplot(aes(x = year, y = predicted.consumption))+ #average consumption across sites
   geom_line(aes(color = site))+
   labs(y = expression(paste("Predicted kelp consumption (g m"^"-2"*"d"^"-1"*")")), x = "")+
   ggpubr::theme_pubr(legend = "right")
@@ -138,14 +142,14 @@ ggsave(here("figures", "timeseries.png"), fig4)
 
 npp <- read.csv("data/survey_data/NPP_ALL_YEARS_seasonal_with_MC_stderr.csv", stringsAsFactors = F,na.strings ="-99999") %>%
   rename_all(tolower) %>%
-  dplyr::select(year, season, site, plnt_dns, frnd_dns, dry_wt,f, p, d, c, b, l) %>%
+  dplyr::select(year, season, site, plnt_dns, frnd_dns, dry_wt,f, p, d, c, b, l) %>% 
   filter(season == "3-Summer") %>%
   mutate(det.r = f + b)
 
-av <- npp %>% summarize(ave = mean(det.r, na.rm = T), 
+av1 <- npp %>% summarize(ave = mean(det.r, na.rm = T), 
                         sd = sd(det.r, na.rm = T)) # so approximately 2% of total biomass is lost as fronds and blades per day!
-av <- av[1,1]
-sd <- av[1,2]
+av <- av1[1,1]
+sd <- av1[1,2]
 
 lt <- lt %>% as_tibble() %>%
   dplyr::select(year, month, site, transect, sp_code, wm_gm2) %>%
@@ -157,7 +161,7 @@ lt <- lt %>% as_tibble() %>%
   drop_na(MAPY) %>%
   mutate(dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
          difference = detritus.production - predicted.consumption, 
-         urc = SPL + SFL)
+         urc = SPL + SFL) #if its negative that means that the urhins are eating more than is available in detritus by that much g/hr? 
 
 # comparison of kelp biomass across all sites/years with kelp biomass at sites with urchin biomass in the 90% percentile
 
@@ -291,49 +295,4 @@ range(lt$predicted.consumption)
 
 lt %>% group_by(site) %>% summarize(cv.space = sd(predicted.consumption)/mean(predicted.consumption)) %>% summarize(mean(cv.space), sd(cv.space))
 lt %>% group_by(year) %>% summarize(cv.time = sd(predicted.consumption)/mean(predicted.consumption)) %>% summarize(mean(cv.time), sd(cv.time))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

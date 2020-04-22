@@ -5,10 +5,13 @@
 library(tidyverse)
 library(ggpubr)
 
+# Here we will be creating histograms that explore the natural distribution of size and abundance of purple and red urhcins across (5????) LTER coastal sites in the Santa Barbara Channel. These realtionships will be used to create size bins for experimentaion and exemplify the natural distribution seen in our density focused herbivory trials. Becuase the abundance and distribution of herbivorous urchins will no doubt have an affect on kelp biomass, it is important to understand and map these distributions in these coastal sites where we will later be testing our experimental models. We will also be looking at our local density in realtionship to the transition density cited in Ling et al. 2015 that predicts the urhcin density required to incite a forward transition from a kelp dominated state to an urhcin dominated state. 
+
+
 
 # Get size data
 
-urc <- read.csv("data/survey_data/LTE_Urchin_All_Years_20190611.csv", header = T) %>% # LTER dataset: urchin size and frequency data collected from 8 transects across 5 sites between 2008-2019 in the Santa Barbara Channel. (Do they use the same transects, or each time they go out or do they create new ones on each trip still labled 2-8 and so all of those should count as seperate transects????)
+urc <- read.csv("data/survey_data/LTE_Urchin_All_Years_20190611.csv", header = T) %>% # LTER dataset: urchin size and frequency data collected from 5 sites between 2008-2019 in the Santa Barbara Channel. #They only take this data once at each site? 
   filter(TREATMENT == "CONTROL") %>% select(YEAR, MONTH, DATE, SITE, TRANSECT, SIZE, COUNT, COMMON_NAME) %>% 
   rename_all(tolower) %>% 
   group_by(year, month, date, site, transect, common_name, size) %>% 
@@ -27,6 +30,8 @@ dh <- ggplot(urc, aes(x = size))+
   labs(x = "Urchin size (cm)", y = "Density", fill = "")+
   theme_pubclean()+
   theme(legend.position = "right") #histogram depicting the relationship between density and urchin sizes across sites, seperately in red and urhcin populations. 
+
+#more purple than red urchins but red urchins get much bigger than purple urchins.
 
 ggsave("figures/urchinsize_densityhisto.png", dh, device = "png")
 

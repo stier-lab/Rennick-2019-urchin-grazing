@@ -9,6 +9,7 @@ library(ggplot2)
 library(lmer)
 library(lmerTest)
 source(here("analysis", "Functions.R"))
+#source(here("analysis", "Functions.R")) linked to exp analysis so we can extract model predicitons
 
 lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER data density estimations collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel.
   dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "PERCENT_COVER", "DENSITY", "WM_GM2", "DRY_GM2", "SCIENTIFIC_NAME", "COMMON_NAME", "GROUP", "MOBILITY", "GROWTH_MORPH", "COARSE_GROUPING" ) %>%
@@ -18,10 +19,10 @@ lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", st
 
 names(lt) <- tolower(names(lt))
 
-sites <- read.csv(here("data/spatial", "lter_waypoints.csv")) #locations on the transects across all 9 sites #whya re there only 49 transects? Did I calculate them wrong in the original data? #how would I code that to check? 
+sites <- read.csv(here("data/spatial", "lter_waypoints.csv")) #locations on the transects across all 9 sites #why re there only 49 transects? Did I calculate them wrong in the original data? #how would I code that to check? 
 
 purple.fun <- function(biomass){
-  0.0009784*biomass #is this the model we got from the size analysis? WHy is there and extra little backwards bracket at the end?
+  0.0009784*biomass #is this the model we got from the size analysis? WHy is there and extra little backwards bracket at the end? CHECK THESE PREDICTIONS 
 }
 
 red.fun <- function(biomass){
@@ -113,7 +114,7 @@ p3 <- mp@data %>% group_by(year, site, sp_code) %>% #where is p2?
   filter(sp_code != "MAPY") %>% #get rid of MAPY
   group_by(year, site) %>%
   mutate(predicted.consumption = sum(predicted.consumption, na.rm = T)*24)%>% # convert to per day rather than per hour
-ggplot(aes(x = year, y = predicted.consumption))+ #you can just throw a ggplot in at the end? interesting.
+ggplot(aes(x = year, y = predicted.consumption))+ #you can just throw a ggplot in at the end? interesting. #average consumption across sites 
     geom_line(aes(color = site))+
     ggpubr::theme_pubr(legend = "right") #cant see the plot 
 
@@ -133,23 +134,22 @@ ggsave(here("figures", "timeseries.png"), fig4)
 
 npp <- read.csv("data/survey_data/NPP_ALL_YEARS_seasonal_with_MC_stderr.csv", stringsAsFactors = F,na.strings ="-99999") %>%
   rename_all(tolower) %>%
-  dplyr::select(year, season, site, plnt_dns, frnd_dns, dry_wt,f, p, d, c, b, l) %>%
+  dplyr::select(year, season, site, plnt_dns, frnd_dns, dry_wt,f, p, d, c, b, l) %>% #metadata LTER - why did Bart chose these ones? 
   filter(season == "3-Summer") %>%
   mutate(det.r = f + b)
 
-av <- npp %>% summarize(ave = mean(det.r, na.rm = T), 
+av1 <- npp %>% summarize(ave = mean(det.r, na.rm = T), 
                         sd = sd(det.r, na.rm = T)) # so approximately 2% of total biomass is lost as fronds and blades per day! #can you explain to me hoe you set this up?
-av <- av[1,1] #average? 
-sd <- av[1,2] #Standard deviation? Error: incorrect number of demensions? 
+av <- av1[1,1] #average? 
+sd <- av1[1,2] #Standard deviation? Error: incorrect number of demensions? 
 
 lt <- lt %>% as_tibble() %>%
   dplyr::select(year, month, site, transect, sp_code, wm_gm2) %>%
   spread(sp_code, wm_gm2) %>% #it says sp_code doesnt exist (where is that?)
   mutate(SFL.pred = red.fun(SFL),
          SPL.pred = purple.fun(SPL), 
-         predicted.consumption = (SPL.pred + SFL.pred)*24, 
+         predicted.consumption = (SPL.pred + SFL.pred)*24, #per hour
          detritus.production = av * MAPY)
-
 
 
 

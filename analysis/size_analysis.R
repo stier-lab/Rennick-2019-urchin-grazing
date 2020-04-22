@@ -5,6 +5,8 @@
 ## Mae Rennick and Bart DiFiore
 ## Urchin Size Data
 
+#Here, we use the data from the size dependent herbivory trials in order to create a model that predicts the influence of red and purple urchin size on herbivory rate of giant kelp.
+
 # --------------------------------------------------------------------------------------------------
 ## Setup and cleaning
 # --------------------------------------------------------------------------------------------------
@@ -68,6 +70,8 @@ ggplot(df, aes(x = mean.size, y = herbivory_rate))+
 
 # Test diameter
 
+#testing different models to find the best fit model for predicting the effect of test diameter on herbivory rate
+
 #purples
 p <- df[df$sp == "p", ]
 lm1 <- lm(herbivory_rate ~ mean.size, data = p)
@@ -86,10 +90,10 @@ r <- df[df$sp == "r", ]
 lm2 <- lm(herbivory_rate ~ mean.size + round, data = r) #linear regression model for the relationship between red urchin test size and herbivory rate
 summary(lm2) #Cannot confirm that the slop is different from zero according to the p-value. Low R2 value.
 
-exp2 <- lm(herbivory_rate ~ (mean.size + I(mean.size^2)) * round, data = r) #what does 'round' do to it? 
+exp2 <- lm(herbivory_rate ~ (mean.size + I(mean.size^2)) * round, data = r) 
 summary(exp2) #exponential model for the relationship between purple urchin test size and herbivory rate #negative intercept?
 
-exp3 <- lm(herbivory_rate ~ mean.size + I(mean.size^2), data = r) #no round
+exp3 <- lm(herbivory_rate ~ mean.size + I(mean.size^2), data = r)
 summary(exp3) #exponential model for the relationship between purple urchin test size and herbivory rate
 
 AIC(lm2, exp2, exp3) #all relatively simillar fits

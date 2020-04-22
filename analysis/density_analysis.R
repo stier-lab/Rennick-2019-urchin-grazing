@@ -10,6 +10,8 @@ library(tidyverse)
 source(here("analysis", "Functions.R"))
 library(car)
 
+#Here, we use the data from the density dependent herbivory trials in order to create a model that predicts the influence of red and purple urchin denisty on herbivory rate on giant kelp. 
+
 # ------------------------------------------------------------------------------------------------
 ## Set up and visualization
 # ------------------------------------------------------------------------------------------------
@@ -23,19 +25,20 @@ df <- read.csv("data/density_experiment/derived/urchin_density_data_cleaned.csv"
   mutate(biomass= sum(urchin_mass)/1.587, # this is the surface area in the tanks 
          urchin_size = NULL, 
          urchin_mass = NULL) %>%
-  distinct() # Put all urchins grouped together by trial ID into a single row? 
+  distinct() 
 
 ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_point(pch = 21)+
   geom_smooth()+
   facet_wrap(~type)+
-  ggpubr::theme_pubclean() #visual comparison of how the biomas of red and pruple urchins affects herbivory rate.
+  ggpubr::theme_pubclean() #visual comparison of how the biomas of red and purple urchins affects herbivory rate.
 
 
 
 # ------------------------------------------------------------------------------------------------
 ## Purple Analaysis
 # ------------------------------------------------------------------------------------------------
+#here we are testing different models to determine the best fit model for the red ensity data
 
 pf <- df[df$type == "p", ] #limiting our dataset to only purple urchins
 
@@ -70,6 +73,7 @@ pred$sig <- predict(sig, newdata = pred)
 
 
 #fit <- nls(herbivory_rate ~ (a*(kelp_in_total/1.587165)*(biomass^(-1*m))), data = pf, list(a = 0.02, m = 1)) # this is a form based on Arditi-Akcakaya model that includes resource density and consumer biomass. Supposedly negative values of m suggest facilitation in consumption by consumers...
+
 #summary(fit)
 
 #pred2 <- data.frame(kelp_in_total = 250/1.587165, biomass = seq(min(pf$biomass), max(pf$biomass), length.out = 1000))
@@ -85,7 +89,7 @@ model_compare <- ggplot(pf, aes(x = biomass, y = herbivory_rate))+
   geom_line(data = pred, aes(x = biomass, y = exp1), color = "blue")+
   geom_line(data = pred, aes(x = biomass, y = sig), color = "green")+
   #geom_line(data = pred2, aes(x = biomass, y = fit), color = "black")+
-  geom_vline(xintercept = coef(sig)[2], lty = "dashed")+ #what is this? Why is there a line here??
+  geom_vline(xintercept = coef(sig)[2], lty = "dashed")+ 
   ggpubr::theme_pubclean()
 
 
@@ -103,14 +107,12 @@ summary(lm2) #Why does the intercept have a p-value higher than 0.05?
 exp2 <- lm(herbivory_rate ~ abundance + I(abundance^2), pf) #exponential regression of herbivory rate as a function of abundance.
 summary(exp2) 
 
-## Why didnt you run the power law function for abundance? 
 
 pred2 <- data.frame(abundance = seq(min(pf$abundance), max(pf$abundance), length.out = 1000))
 pred2$lm2 <- predict(lm2, newdata = pred2) #linear model predictions for herbivory rate as a function of biomass
 pred2$exp2 <- predict(exp2, newdata = pred2) #exponential model predictions for herbivory rate as a function of biomass
 
 sig2 <- nls(herbivory_rate ~ (a * abundance^2) / (b^2 + abundance^2), data = pf, start = list(a = 10, b = 22)) # this is an alternative parameterization based on Bolker et al. 2008, bestiary of functions p. 22. "a" is similar to handling time, and b is similar to attack rate in this parameterization. 
-#How is this nonlinear regression different from the nonlinear regression we ran with biomass? 
 
 summary(sig2)
 pred2$sig2 <- predict(sig2, newdata = pred2)
@@ -122,7 +124,7 @@ ggplot(pf, aes(x = abundance, y = herbivory_rate))+
   geom_line(data = pred2, aes(x = abundance, y = lm2), color = "red")+
   geom_line(data = pred2, aes(x = abundance, y = exp2), color = "blue")+
   geom_line(data = pred2, aes(x = abundance, y = sig2), color = "green")+
-  geom_vline(xintercept = coef(sig2)[2], lty = "dashed")+ #again, what is this line?
+  geom_vline(xintercept = coef(sig2)[2], lty = "dashed")+ 
   ggpubr::theme_pubclean() 
 
 
@@ -164,6 +166,7 @@ ggplot(my.model, aes(x = biomass, y = herb)) + geom_line()+
 # ------------------------------------------------------------------------------------------------
 ## Red analysis
 # ------------------------------------------------------------------------------------------------ 
+#here we are testing different models to determine the best fit model for the red ensity data
 
 rf <- df[df$type == "r", ] #limiting our dataset to only purple urchins
 
@@ -176,7 +179,7 @@ exp1 <- lm(herbivory_rate ~ biomass + I(biomass^2), rf)
 summary(exp1) #exponential regression of herbivory rate as a function of biomass
 
 pred3 <- data.frame(biomass = seq(min(rf$biomass), max(rf$biomass), length.out = 1000))
-pred3$lm <- predict(lm1, newdata = pred3) #linear model predictions. What is the dollar sign for? Does it just add it to 'pred3'?
+pred3$lm <- predict(lm1, newdata = pred3) #linear model predictions.
 pred3$exp1 <- predict(exp1, newdata = pred3) #exponential model predictions
 
 sig <- nls2::nls2(herbivory_rate ~ (biomass^(1+q) * a) / (1 + a*h*biomass^(1+q)), data = rf, start = list(a = 0.1, h = 1.5, q = 0), algorithm = "port") # coulnd't get this parameterization to work #Can you test a nonlinearity like you did for the purples? 
@@ -202,17 +205,17 @@ model_compare3 <- ggplot(rf, aes(x = biomass, y = herbivory_rate))+
 ## Figure 2: The relationship between biomass and herbivory rate
 # ------------------------------------------------------------------------------------------------ 
 
-temp1 <- pred %>% gather(model, prediction, -biomass) %>% mutate(sp = "Purple urchin") #Why is this called 'temp'?
+temp1 <- pred %>% gather(model, prediction, -biomass) %>% mutate(sp = "Purple urchin") 
 temp2 <- pred3 %>% gather(model, prediction, -biomass) %>% mutate(sp = "Red urchin")
 
-gg <- bind_rows(temp1, temp2) %>% filter(model != "exp1", model != "pow1") #eliminating the exp and pow function predictions? 
+gg <- bind_rows(temp1, temp2) %>% filter(model != "exp1", model != "pow1") #eliminating the exp and pow function predictions
 gg$Model <- ifelse(gg$model == "lm", "Linear", "Sigmoid") #what is ifelse? #including the linear and sigmoidal models. 
-df$sp <- ifelse(df$type == "p", "Purple urchin", "Red urchin") #cahnging species names from their intial to their conventional names? 
+df$sp <- ifelse(df$type == "p", "Purple urchin", "Red urchin")  
 
 
 fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_jitter(color = "white", pch = 21, show.legend = F)+
-  geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=0, ymax=Inf), color = "gray90", fill = "gray90")+ # 688gm^-2 is the transition denisty cited in Ling et. al 2016 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
+  geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=0, ymax=Inf), color = "gray90", fill = "gray90")+ # 688gm^-2 is the transition denisty cited in Ling et. al 2015 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
   geom_vline(xintercept = 668, linetype = 4)+
   geom_jitter(aes(fill = sp), pch = 21, show.legend = F)+
   scale_fill_manual(values = c("#762a83", "#d73027"))+
@@ -236,7 +239,7 @@ predict(lm1, newdata = list(biomass = 668), se.fit = T) #Using the model to pred
 # Supplemental figure 1
 #-----------------------------------------------
 
-pf$con_per_g_biomass <- pf$herbivory_rate / pf$biomass #adding con_per_g_biomass to the pruple urchin dataset
+pf$con_per_g_biomass <- pf$herbivory_rate / pf$biomass #adding con_per_g_biomass to the purple urchin dataset
 
 s1 <- lm(con_per_g_biomass ~ biomass, pf) #linear model of per capita consumption for purple urchins. what is con? concentration? concentration of what? This is percapita consumption? 
 summary(s1)
