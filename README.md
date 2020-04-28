@@ -7,10 +7,22 @@ This repository houses code and data related to a manuscript (XXXX) that explore
 
 This repo is maintained by Mae Rennick (GitHub: [@maerennick](https://github.com/maerennick)) at the University of California, Santa Barbara in the Department of Ecology, Evolution, & Marine Biology.
 
-#Code
+# Code
 
 file name | description 
 ---|-----------
+density_analysis.R | This script generates figure 2 which fits sigmoidal and linear regression models to the experimental denisty data (data/density_experiment/derived/urchin_density_data_cleaned.csv)in order to predict how the density of red and purple urchins will affect herbivory rate. All of the models produced in this script were tested and compared using AIC to determine the most appropriate model for this dataset. 
+size_analysis.R | This script generates figure 3. It utilizes experimental size data (Purple_size_data.csv , red_size_data_2.csv , and red_size_data_round2.csv) to find a best fit model to predict how the size of red and purple urchins will affect herbivory rate. All models were compared using AIC and anova.
+histograms.R | This script uses observational data of purple and red urchin density and size obtained from the Santa Barbara LTER (LTE_Urchin_All_Years_20190611.csv) in order to determine size distribution and frequency of red and purple urhcins across five coastal sites within the Santa Barbara Channel. This script additionally includes calculations to determine mean and range of urchin density and size, and density comparisons between red and purple urchins. 
+observational_analysis.R | This script generates a model that fits the relationship between urchin density and kelp biomass based on observational data recorded by the Santa Barbara LTER (Annual_All_Species_Biomass_at_transect.csv). This data was then used to track the realtionship through time and space through a generated mixed effects model. 
+spatio-temporal_analysis.R | This script maps predicted herbivory pressure derived from the size analayis (size_analysis.R) and denisty analysis (density_analysis.R) of red and purple urchins thorugh time across 11 sites in the Santa Barbara Channel by applying it to the observational data reported by the Santa Barbara LTER for red and purple urchin size and density. Additionally this script utilizes observational data of available detrital supply to track the relationship between available detrital supply, predicted herbivory pressure, and live kelp biomass. 
 
-density_analysis.R | This script utilizes best fit model to predict how the density of red and purple urchins will affect herbivory rate. Models were tested and compared using AIC to determine the most appropriate model for this dataset. This script was used to create figure 2. 
-size_analysis.R | This script utilizes experimental data collected from kelp consumption trials conducted at the University of Santa Barbara California during the summer of 2019, to find a best fit model to predict how the size of red and purple urchins will affect herbivory rate.
+
+# LTER Data ?
+*/data/LTER*
+
+Data files exceed 100 MB, but can be downloaded from the Santa Barbara Coastal Long Term Ecological Research webpage at: 
+
+ - [knb-lter-sbc.2002.24](http://sbc.lternet.edu/cgi-bin/showDataset.cgi?docid=knb-lter-sbc.2002) 
+ - [knb-lter-sbc.13.21](http://sbc.lternet.edu/cgi-bin/showDataset.cgi?docid=knb-lter-sbc.13) 
+ 
