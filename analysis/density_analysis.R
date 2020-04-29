@@ -21,11 +21,11 @@ df <- read.csv("data/density_experiment/derived/urchin_density_data_cleaned.csv"
   mutate (herbivory_rate = (kelp_consumed/total_time)*24, 
           abundance = urchin_density, 
           urchin_density = NULL) %>% 
-  group_by(trial_id) %>% #THIS GOT MESSED UP- R5-1 is doubled. 
-  mutate(biomass= sum(urchin_mass)/1.587, # this is the surface area in the tanks 
-         urchin_size = NULL, 
-         urchin_mass = NULL) %>%
-  distinct() 
+  group_by(date, type, trial_number, trial_id, tank, tank_size, total_time, kelp_in_total, Kelp_out_total, mortality, kelp_consumed, herbivory_rate, abundance) %>% #THIS GOT MESSED UP- R5-1 is doubled. 
+  summarize(biomass= sum(urchin_mass)/1.587) %>%
+  mutate(urchin_size = NULL, 
+         urchin_mass = NULL)
+
 
 ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_point(pch = 21)+
