@@ -5,13 +5,13 @@
 ## Mae Rennick and Bart DiFiore
 ## Urchin Size Data
 
-#Here, we use the data from the size dependent herbivory trials in order to create a model that predicts the influence of red and purple urchin size on herbivory rate of giant kelp.594 red and purple urchins tested. 
+#Here, we use the data from the size dependent herbivory trials in order to create a model that predicts the influence of red and purple urchin size on herbivory rate of giant kelp.519 red and purple urchins tested. 
 
 # --------------------------------------------------------------------------------------------------
 ## Setup and cleaning
 # --------------------------------------------------------------------------------------------------
 
-# size and weight data for purple urhcins. 5 size bins in 10 mm increments from 10 mm-60 mm were tested over two weeks. 7 urchins per tank with 7 replicates per size bin. Total of 294 urchins in 42 trials.
+# size and weight data for purple urhcins. 6 size bins in 10 mm increments from 10 mm-69 mm were tested over two weeks. 7 urchins per tank with 7 replicates per size bin. Total of 294 urchins in 42 trials.
 
 pf <- read.csv("data/size_experiment/raw/purple_urchin_size_data_raw_c.csv") %>% 
   as_tibble() %>% #coercing the dataframe together
@@ -23,32 +23,37 @@ pf <- read.csv("data/size_experiment/raw/purple_urchin_size_data_raw_c.csv") %>%
          time_ran = 48)%>%
   rename(size_class = urchin_size_cat) #cleaned purple urchin size trials dataset
 
-df_r <- read.csv("data/size_experiment/raw/red_size_data_2.csv") %>% # size and weight data for red urhcins. Round 1. Red urchins were placed into 5 19mm size bins incrementally from 10-109 mm. Each size bin was replicated 6 times over two weeks, with a total of urchins 150 urchins.
+df_r <- read.csv("data/size_experiment/raw/red_size_data_2.csv") %>% # size and weight data for red urhcins. Round 1. Red urchins were placed into 5 19mm size bins incrementally from 10-109 mm. Each size bin was replicated 3 times over a week, with a total of urchins 75 urchins.
   filter(rep != "control") %>% 
   mutate(round =1, 
          urchin_density=5, 
          rep = NULL, 
          weight= NA, 
          sp = "r", 
-         use=1)
+         use=1) %>% 
+  filter(time_ran==96)
 
-rf <-read.csv("data/size_experiment/raw/red_size_data_round2.csv") %>% #6 replicates of each of the five size classes of red urchins with 5 urchins in each trial. #150 urchins
+rf <-read.csv("data/size_experiment/raw/red_size_data_round2.csv") %>% #3 more replicates of each of the five size classes of red urchins with 5 urchins in each trial. #75 urchins
   rename(kelp_in = Kelp_in, kelp_out =Kelp_out, sp = urchin) %>%
+  filter(time_ran ==96) %>% 
+  filter(use==1) %>% 
   bind_rows(df_r) %>%
   dplyr::select(-c(tank, side, level)) %>%
+  filter(size_class != "NA") %>% 
   rename(abundance = urchin_density)
 
 col_order <- c("trial_id", "round", "sp", "abundance", "size_class", "size", "weight", "kelp_in", "kelp_out", "time_ran")
 pf <- pf[, col_order]
 rf <- rf[, col_order] #reordering the columns so that the red and purple dataframes match 
 
-df <- bind_rows(pf, rf) %>% #combining red and purple datasets
-  mutate(id = as.numeric(as.factor(paste(trial_id, round, sp, sep = "")))) %>%
-  #group_by(id, sp, abundance, kelp_in, kelp_out, use, round, time_ran) %>%
+df <- bind_rows(pf, rf) %>%#combining red and purple data sets THERE SHOULD BE 87 TRIALS HERE!!!
+  filter(herbivory_rate!=0.000000000)
+mutate(id = as.numeric(as.factor(paste(trial_id, round, sp, sep = "")))) %>%
+  roup_by(id, sp, abundance, kelp_in, kelp_out, use, round, time_ran) %>%
   summarize(mean.size = mean(size), 
             biomass = sum(weight)) %>%
   mutate(herbivory_rate = ((kelp_in - kelp_out)/time_ran)*24) %>%
-  #filter(time_ran == 48, use == 1)
+  
 
 # --------------------------------------------------------------------------------------------------
 ## Modeling and visulization

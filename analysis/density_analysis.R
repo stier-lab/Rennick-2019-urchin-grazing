@@ -17,7 +17,7 @@ library(car)
 # ------------------------------------------------------------------------------------------------
 
 
-df <- read.csv("data/density_experiment/raw/urchin_density_data_raw_c.csv", stringsAsFactors = FALSE) %>% #cdata from density dependent urchin herbivory lab trials for red and purple urhcins. Two trials of 5 sizes densities tested for red urchins with two replicates of each. Two trials of 8 densities tested for purple urchins with two replicates of each. 
+df <- read.csv("data/density_experiment/raw/urchin_density_data_raw_c.csv", stringsAsFactors = FALSE) %>% #cdata from density dependent urchin herbivory lab trials for red and purple urhcins.  5 densities tested for red urchins with three replicates of each. 8 densities tested for purple urchins with four replicates of each. 
   as_tibble() %>% 
   select(kelp_in, kelp_out, urchin_density, tank, tank_size, date, trial_number, p_r, trial_id, total_time, urchin_size, urchin_mass, mortality) %>% 
   mutate(kelp_consumed=(kelp_in-kelp_out)) %>% 
@@ -32,7 +32,7 @@ df <- read.csv("data/density_experiment/raw/urchin_density_data_raw_c.csv", stri
 ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_point(pch = 21)+
   geom_smooth()+
-  facet_wrap(~type)+
+  facet_wrap(~p_r)+
   ggpubr::theme_pubclean() #visual comparison of how the biomas of red and purple urchins affects herbivory rate.
 
 
