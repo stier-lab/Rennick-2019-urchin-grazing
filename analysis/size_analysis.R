@@ -5,19 +5,17 @@
 ## Mae Rennick and Bart DiFiore
 ## Urchin Size Data
 
-#Here, we use the data from the size dependent herbivory trials in order to create a model that predicts the influence of red and purple urchin size on herbivory rate of giant kelp.
+#Here, we use the data from the size dependent herbivory trials in order to create a model that predicts the influence of red and purple urchin size on herbivory rate of giant kelp.594 red and purple urchins tested. 
 
 # --------------------------------------------------------------------------------------------------
 ## Setup and cleaning
 # --------------------------------------------------------------------------------------------------
 
-pf.s <- read.csv("data/size_experiment/raw/Purple_size_data.csv") # size and weight data for purple urhcins. 5 size bins in 10 mm increments from 10 mm-60 mm were tested over two weeks. 7 urchins per tank with 3-4 replicates per size bin each week. Total of 315 urchins in 45 trials.
+# size and weight data for purple urhcins. 5 size bins in 10 mm increments from 10 mm-60 mm were tested over two weeks. 7 urchins per tank with 7 replicates per size bin. Total of 294 urchins in 42 trials.
 
-pf <- read.csv("data/size_experiment/raw/Purple_consuption_data.csv") %>% 
+pf <- read.csv("data/size_experiment/raw/purple_urchin_size_data_raw_c.csv") %>% 
   as_tibble() %>% #coercing the dataframe together
-  filter(urchin_size_cat != 'control') %>% #removing the control
-  left_join(pf.s) %>% #adding the urchin size and weight data to the dataframe
-  dplyr::select(-c(date, days_starved,time_in, time_out, week_no, tank, side)) %>% #removing excess data
+  dplyr::select(-c(date, days_starved, week_no, tank, time_out, side, use)) %>% #removing excess data
   mutate(abundance = urchin_dens, 
          urchin_dens = NULL, 
          sp = "p",
@@ -25,7 +23,8 @@ pf <- read.csv("data/size_experiment/raw/Purple_consuption_data.csv") %>%
          time_ran = 48)%>%
   rename(size_class = urchin_size_cat) #cleaned purple urchin size trials dataset
 
-df_r <- read.csv("data/size_experiment/raw/red_size_data_2.csv") %>% # size and weight data for red urhcins. Red urchins were placed into 5 19mm size bins incrementally from 10-109 mm. Each size bin was replicated three times, with a total of urchins in 45 .
+df_r <- read.csv("data/size_experiment/raw/red_size_data_2.csv") %>% # size and weight data for red urhcins. Round 1. Red urchins were placed into 5 19mm size bins incrementally from 10-109 mm. Each size bin was replicated 6 times over two weeks, with a total of urchins 150 urchins.
+  filter(rep != "control") %>% 
   mutate(round =1, 
          urchin_density=5, 
          rep = NULL, 
@@ -33,23 +32,23 @@ df_r <- read.csv("data/size_experiment/raw/red_size_data_2.csv") %>% # size and 
          sp = "r", 
          use=1)
 
-rf <-read.csv("data/size_experiment/raw/red_size_data_round2.csv") %>%
+rf <-read.csv("data/size_experiment/raw/red_size_data_round2.csv") %>% #6 replicates of each of the five size classes of red urchins with 5 urchins in each trial. #150 urchins
   rename(kelp_in = Kelp_in, kelp_out =Kelp_out, sp = urchin) %>%
   bind_rows(df_r) %>%
   dplyr::select(-c(tank, side, level)) %>%
   rename(abundance = urchin_density)
 
-col_order <- c("trial_id", "round", "sp", "abundance", "size_class", "size", "weight", "kelp_in", "kelp_out", "time_ran", "use")
+col_order <- c("trial_id", "round", "sp", "abundance", "size_class", "size", "weight", "kelp_in", "kelp_out", "time_ran")
 pf <- pf[, col_order]
-rf <- rf[, col_order] #reordering the columns so that the red and purple dataframes match - is this too much info? It seems like overkill. 
+rf <- rf[, col_order] #reordering the columns so that the red and purple dataframes match 
 
 df <- bind_rows(pf, rf) %>% #combining red and purple datasets
   mutate(id = as.numeric(as.factor(paste(trial_id, round, sp, sep = "")))) %>%
-  group_by(id, sp, abundance, kelp_in, kelp_out, use, round, time_ran) %>%
+  #group_by(id, sp, abundance, kelp_in, kelp_out, use, round, time_ran) %>%
   summarize(mean.size = mean(size), 
             biomass = sum(weight)) %>%
   mutate(herbivory_rate = ((kelp_in - kelp_out)/time_ran)*24) %>%
-  filter(time_ran == 48, use == 1)  #what do you do about all of the NA 'rounds'?
+  #filter(time_ran == 48, use == 1)
 
 # --------------------------------------------------------------------------------------------------
 ## Modeling and visulization

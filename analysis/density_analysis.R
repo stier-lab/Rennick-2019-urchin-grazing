@@ -13,19 +13,21 @@ library(car)
 #Here, we use the data from the density dependent herbivory trials in order to create a model that predicts the influence of red and purple urchin denisty on herbivory rate on giant kelp. 
 
 # ------------------------------------------------------------------------------------------------
-## Set up and visualization
+## Set up and visualization and clean data
 # ------------------------------------------------------------------------------------------------
 
-df <- read.csv("data/density_experiment/derived/urchin_density_data_cleaned.csv") %>% #cleaned data from density dependent urchin herbivory lab trials for red and purple urhcins. Two trials of 5 sizes densities tested for red urchins with two replicates of each. Two trials of 8 densities tested for purple urchins with two replicates of each.
-  mutate(kelp_consumed = kelp_in_total-Kelp_out_total) %>% 
+
+df <- read.csv("data/density_experiment/raw/urchin_density_data_raw_c.csv", stringsAsFactors = FALSE) %>% #cdata from density dependent urchin herbivory lab trials for red and purple urhcins. Two trials of 5 sizes densities tested for red urchins with two replicates of each. Two trials of 8 densities tested for purple urchins with two replicates of each. 
+  as_tibble() %>% 
+  select(kelp_in, kelp_out, urchin_density, tank, tank_size, date, trial_number, p_r, trial_id, total_time, urchin_size, urchin_mass, mortality) %>% 
+  mutate(kelp_consumed=(kelp_in-kelp_out)) %>% 
   mutate (herbivory_rate = (kelp_consumed/total_time)*24, 
           abundance = urchin_density, 
           urchin_density = NULL) %>% 
-  group_by(date, type, trial_number, trial_id, tank, tank_size, total_time, kelp_in_total, Kelp_out_total, mortality, kelp_consumed, herbivory_rate, abundance) %>% #THIS GOT MESSED UP- R5-1 is doubled. 
-  summarize(biomass= sum(urchin_mass)/1.587) %>%
+  group_by(date, p_r, trial_number, trial_id, tank, tank_size, total_time, kelp_in, kelp_out, mortality, kelp_consumed, abundance, herbivory_rate) %>%
+  summarize(biomass= sum(urchin_mass )/1.587) %>%
   mutate(urchin_size = NULL, 
-         urchin_mass = NULL)
-
+         urchin_mass  = NULL)
 
 ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_point(pch = 21)+
