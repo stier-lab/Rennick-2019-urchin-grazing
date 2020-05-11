@@ -21,7 +21,9 @@ pf <- read.csv("data/size_experiment/raw/purple_urchin_size_data_raw_c.csv") %>%
          sp = "p",
          round = NA, 
          time_ran = 48)%>%
-  rename(size_class = urchin_size_cat) #cleaned purple urchin size trials dataset
+  rename(size_class = urchin_size_cat)#cleaned purple urchin size trials dataset
+
+pf$size_class <- as.character(pf$size_class)
 
 df_r <- read.csv("data/size_experiment/raw/red_size_data_2.csv") %>% # size and weight data for red urhcins. Round 1. Red urchins were placed into 5 19mm size bins incrementally from 10-109 mm. Each size bin was replicated 3 times over a week, with a total of urchins 75 urchins.
   filter(rep != "control") %>% 
@@ -41,13 +43,13 @@ rf <-read.csv("data/size_experiment/raw/red_size_data_round2.csv") %>% #3 more r
   dplyr::select(-c(tank, side, level)) %>%
   filter(size_class != "NA") %>% 
   rename(abundance = urchin_density)
+  
 
 col_order <- c("trial_id", "round", "sp", "abundance", "size_class", "size", "weight", "kelp_in", "kelp_out", "time_ran")
 pf <- pf[, col_order]
 rf <- rf[, col_order] #reordering the columns so that the red and purple dataframes match 
 
-df <- bind_rows(pf, rf) %>%#combining red and purple data sets THERE SHOULD BE 87 TRIALS HERE!!!
-  filter(herbivory_rate!=0.000000000)
+df <- bind_rows(pf, rf) %>%
 mutate(id = as.numeric(as.factor(paste(trial_id, round, sp, sep = "")))) %>%
   roup_by(id, sp, abundance, kelp_in, kelp_out, use, round, time_ran) %>%
   summarize(mean.size = mean(size), 
