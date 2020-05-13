@@ -8,9 +8,9 @@ library(tidyr)
 library(ggplot2)
 library(lmer)
 library(lmerTest)
-source(here("analysis", "Functions.R"))
+source(here("analysis/", "Functions.R"))
 library(car) 
-source(here("analysis", "Functions.R"))
+source(here("analysis/", "density_analysis.R"))
 #source(here("analysis", "Functions.R")) linked to exp analysis so we can extract model predicitons
 
 #We are going to apply the models extracted from the size and density analysis to 9 LTER coastal sites. We are going to track urchin density through time and apply herbivory pressure estiamtes to each site based on our findings. We additionally are incoorperating observational data realting to detriatal supply to test its bearing on the amount of kelp biomass lost in a given area. 
@@ -26,11 +26,11 @@ names(lt) <- tolower(names(lt))
 sites <- read.csv(here("data/spatial", "lter_waypoints.csv")) 
 
 purple.fun <- function(biomass){
-  0.023482*biomass
+  coef(lm1)[1]*biomass
 } # this is the herbivory rate model prediction formed from the density analysis for purple urchins
 
 red.fun <- function(biomass){
-  0.009042*biomass
+  lm1.r*biomass
 } # this is the herbivory rate model prediction formed from the density analysis for red urchins
 
 

@@ -42,7 +42,7 @@ ggplot(df, aes(x = biomass, y = herbivory_rate))+
 # ------------------------------------------------------------------------------------------------
 #here we are testing different models to determine the best fit model for the red ensity data
 
-pf <- df[df$type == "p", ] #limiting our dataset to only purple urchins
+pf <- df[df$p_r == "p", ] #limiting our dataset to only purple urchins
 
 lm1 <- lm(herbivory_rate ~ 0 + biomass, pf) #linear model representing herbivory rate as a function of biomass.
 summary(lm1)
@@ -170,18 +170,18 @@ ggplot(my.model, aes(x = biomass, y = herb)) + geom_line()+
 # ------------------------------------------------------------------------------------------------ 
 #here we are testing different models to determine the best fit model for the red ensity data
 
-rf <- df[df$type == "r", ] #limiting our dataset to only purple urchins
+rf <- df[df$p_r == "r", ] #limiting our dataset to only purple urchins
 
 
-lm1 <- lm(herbivory_rate ~ 0 + biomass, rf)#linear model representing herbivory rate as a function of biomass.
-summary(lm1)
-modelassump(lm1)
+lm1.r <- lm(herbivory_rate ~ 0 + biomass, rf)#linear model representing herbivory rate as a function of biomass.
+summary(lm1.r)
+modelassump(lm1.r)
 
 exp1 <- lm(herbivory_rate ~ biomass + I(biomass^2), rf)
 summary(exp1) #exponential regression of herbivory rate as a function of biomass
 
 pred3 <- data.frame(biomass = seq(min(rf$biomass), max(rf$biomass), length.out = 1000))
-pred3$lm <- predict(lm1, newdata = pred3) #linear model predictions.
+pred3$lm <- predict(lm1.r, newdata = pred3) #linear model predictions.
 pred3$exp1 <- predict(exp1, newdata = pred3) #exponential model predictions
 
 sig <- nls2::nls2(herbivory_rate ~ (biomass^(1+q) * a) / (1 + a*h*biomass^(1+q)), data = rf, start = list(a = 0.1, h = 1.5, q = 0), algorithm = "port") # coulnd't get this parameterization to work #Can you test a nonlinearity like you did for the purples? 
@@ -192,7 +192,7 @@ sig <- nls(herbivory_rate ~ (a * biomass^2) / (b^2 + biomass^2), data = rf, star
 summary(sig)
 pred3$sig <- predict(sig, newdata = pred3)
 
-AIC(lm1, exp1, sig)
+AIC(lm1.r, exp1, sig)
 # So it seems that there is no evidence for any differences between linear and sigmoidal curves. 
 
 model_compare3 <- ggplot(rf, aes(x = biomass, y = herbivory_rate))+
@@ -212,7 +212,7 @@ temp2 <- pred3 %>% gather(model, prediction, -biomass) %>% mutate(sp = "Red urch
 
 gg <- bind_rows(temp1, temp2) %>% filter(model != "exp1", model != "pow1") #eliminating the exp and pow function predictions
 gg$Model <- ifelse(gg$model == "lm", "Linear", "Sigmoid") #what is ifelse? #including the linear and sigmoidal models. 
-df$sp <- ifelse(df$type == "p", "Purple urchin", "Red urchin")  
+df$sp <- ifelse(df$p_r == "p", "Purple urchin", "Red urchin")  
 
 
 fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
