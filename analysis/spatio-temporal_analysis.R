@@ -30,11 +30,80 @@ purple.fun <- function(biomass){
 } # this is the herbivory rate model prediction formed from the density analysis for purple urchins
 
 red.fun <- function(biomass){
-  lm1.r*biomass
+  coef(lm1.r)*biomass 
+  
 } # this is the herbivory rate model prediction formed from the density analysis for red urchins
 
 
-# -----------------------------------------------------
+# ----------------------------------------------------
+
+## Make the map
+
+library(rgdal)
+library(rgeos)
+library(sp)
+library(raster)
+
+mp <- lt %>% as_tibble() %>%
+  mutate(predited.consumption = ifelse(sp_code == "SPL", purple.fun(wm_gm2), 
+                                       ifelse(sp_code == "SFL", red.fun(wm_gm2), NA))) %>%
+  left_join(sites) #Adding in the long lat data to the LTER density data
+
+
+coordinates(mp) <- ~long + lat
+
+proj4string(mp) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
+
+
+
+cal <- readOGR(here("data/spatial", "caloutline.shp"))
+all_mpas <- readOGR(here("data/spatial", "state_mpas.shp"))
+
+d <- par(las = 1, mgp = c(3, 0.75, 0))
+plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE) # cal state
+plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
+plot(mp, pch = 21, cex = mp$predited.consumption*0.25, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .5))
+
+par(d)
+
+# Make a plot for each year...
+for(i in 2002:2018){
+  myfile <- file.path("figures/maps", paste("year", "_", i, ".png"))
+  png(myfile, width = 1000*3, height = 561*3, res = 300)
+  d <- par(las = 1, mgp = c(3, 0.75, 0), mar = c(4,5,3,1))
+  plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE) # cal state
+  plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
+  plot(mp[mp$year == i,], pch = 21, cex = mp$predited.consumption[mp$year == i]*0.25, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .25))
+  par(d)
+  dev.off()
+}
+
+
+# Make a time averaged plot...
+
+av <- mp@data %>% 
+  mutate(group = cut(year, breaks = 4, labels = FALSE)) %>%
+  group_by(site, transect, group) %>%
+  summarize(predicted.consumption = mean(predited.consumption, na.rm = T)) %>%
+  left_join(sites)
+
+coordinates(av) <- ~long + lat
+
+proj4string(av) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
+
+#c(bottom, left, top, right)
+id <- c("2000-2004", "2005-2009", "2010-2013", "2014-2018")
+
+png(here("figures", "map.png"), width = 1000*1.2, 600*1.2)
+d <- par(mfrow = c(2, 2), las = 1, mgp = c(3, 0.75, 0), mar = c(3,5, 1.5, 0.5))
+for(i in 1:4){
+  plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE, main = paste(id[i])) # cal state
+  plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
+  plot(av[av$group == i, ], pch = 21, cex = av$predicted.consumption[av$group == i], add = T, lwd = 1.5,  bg = alpha("#e31a1c", .5))
+}
+par(d)
+dev.off()
+
 ## Time series analysis
 # -----------------------------------------------------
 
@@ -84,16 +153,19 @@ av <- av1[1,1]
 sd <- av1[1,2]
 
 lt <- lt %>% as_tibble() %>%
-  dplyr::select(year, month, site, transect, sp_code, wm_gm2) %>%
-  spread(sp_code, wm_gm2) %>%
-  mutate(SFL.pred = red.fun(SFL),
-         SPL.pred = purple.fun(SPL), 
+  dplyr::select('YEAR', 'MONTH', 'SITE', 'TRANSECT', 'SP_CODE', 'WM_GM2') %>%
+  spread('SP_CODE', 'WM_GM2') %>%
+  rename_all(tolower) %>% 
+  mutate(SFL.pred = red.fun('SFL'),
+         SPL.pred = purple.fun('SPL'), 
          predicted.consumption = (SPL.pred + SFL.pred), 
          detritus.production = av * MAPY) %>% 
   drop_na(MAPY) %>%
   mutate(dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
          difference = detritus.production - predicted.consumption, 
          urc = SPL + SFL) #if its negative that means that the urhins are eating more than is available in detritus by that much g/hr? 
+
+
 
 # comparison of kelp biomass across all sites/years with kelp biomass at sites with urchin biomass in the 90% percentile
 
