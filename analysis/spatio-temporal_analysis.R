@@ -27,25 +27,17 @@ red.fun <- function(biomass){
 
 
 lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER data density estimations collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel.
-  dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "PERCENT_COVER", "DENSITY", "WM_GM2", "DRY_GM2", "SCIENTIFIC_NAME", "COMMON_NAME", "GROUP", "MOBILITY", "GROWTH_MORPH", "COARSE_GROUPING" ) %>%
-  mutate(id = paste(SITE, TRANSECT, sep = "")) %>%
-  filter(COMMON_NAME == "Purple Urchin" | COMMON_NAME == "Red Urchin" | COMMON_NAME == "Giant Kelp")%>% #filtering the data to only include giant kelp, purple urchins, and red urchins
+  dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "WM_GM2") %>%
+  filter(SP_CODE %in% c("MAPY", "SFL", "SPL"))%>% #filtering the data to only include giant kelp, purple urchins, and red urchins
   filter(SITE != "SCTW", SITE != "SCDI") %>% 
   #Filtering out island sites. This study focuses on costal sites.
   rename_all(tolower) %>% 
   group_by(year, month, site, transect, sp_code) %>% 
-  mutate(biomass = mean(wm_gm2, na.rm = T))%>%
-  spread('sp_code', 'wm_gm2') %>%
-  mutate(SFL.pred = red.fun('SFL'),
-         SPL.pred = purple.fun('SPL'), 
-         predicted.consumption = (SPL.pred + SFL.pred), 
-         detritus.production = av * MAPY) %>% 
-  drop_na(MAPY) %>%
-  mutate(dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
-         difference = detritus.production - predicted.consumption, 
-         urc = SPL + SFL)
+  spread(sp_code, wm_gm2) %>%
+  mutate(SFL.pred = red.fun(SFL),
+         SPL.pred = purple.fun(SPL), 
+         predicted.consumption = (SPL.pred + SFL.pred))
 
-names(lt) <- tolower(names(lt))
 
 
 ## Time series analysis
@@ -54,20 +46,16 @@ names(lt) <- tolower(names(lt))
 # time series
 
 p1 <- lt %>% #LTER data 
-  filter(sp_code == "MAPY") %>% #filtering for macrocystis pyrifera 
   group_by(year, site) %>%
-  mutate(biomass = mean(wm_gm2, na.rm = T))%>% #adding a biomass column
+  summarize(biomass = mean(MAPY, na.rm = T))%>% #adding a biomass column
   ggplot(aes(x = year, y = biomass))+
   geom_line(aes(color = site))+
   labs(y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), x = "")+
   ggpubr::theme_pubr(legend = "right")
 
-p3 <- lt %>% group_by(year, site, sp_code) %>%
-  summarize(predicted.consumption = mean(predicted.consumption)) %>%
-  ungroup() %>%
-  filter(sp_code != "MAPY") %>%
-  group_by(year, site) %>%
-  mutate(predicted.consumption = sum(predicted.consumption, na.rm = T))%>% # convert to per day rather than per hour? Why didnt you add = T)*24)%>% like in the spatial analysis? 
+p3 <- lt %>%
+  group_by(year,site) %>%
+  summarize(predicted.consumption = mean(predicted.consumption, na.rm = T)) %>%
   ggplot(aes(x = year, y = predicted.consumption))+ #average consumption across sites
   geom_line(aes(color = site))+
   labs(y = expression(paste("Predicted kelp consumption (g m"^"-2"*"d"^"-1"*")")), x = "")+
@@ -96,19 +84,12 @@ av1 <- npp %>% summarize(ave = mean(det.r, na.rm = T),
 av <- av1[1,1]
 sd <- av1[1,2]
 
-lt_2 <- lt %>% as_tibble() %>%
-  dplyr::select('year', 'month', 'site', 'transect', 'sp_code', 'wm_gm2') %>%
-  spread('sp_code', 'wm_gm2') %>%
-  mutate(biomass = mean(wm_gm2, na.rm = T))%>% 
-  mutate(SFL.pred = red.fun('SFL'),
-         SPL.pred = purple.fun('SPL'), 
-         predicted.consumption = (SPL.pred + SFL.pred), 
-         detritus.production = av * MAPY) %>% 
+lt <- lt %>%
   drop_na(MAPY) %>%
-  mutate(dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
+  mutate(detritus.production = av * MAPY, 
+         dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
          difference = detritus.production - predicted.consumption, 
          urc = SPL + SFL) #if its negative that means that the urhins are eating more than is available in detritus by that much g/hr? 
-
 
 
 # comparison of kelp biomass across all sites/years with kelp biomass at sites with urchin biomass in the 90% percentile
@@ -245,21 +226,3 @@ lt %>% group_by(site) %>% summarize(cv.space = sd(predicted.consumption)/mean(pr
 lt %>% group_by(year) %>% summarize(cv.time = sd(predicted.consumption)/mean(predicted.consumption)) %>% summarize(mean(cv.time), sd(cv.time))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-mutate(predicted.consumption = ifelse(SP_CODE == "SPL", purple.fun(WM_GM2), 
-                                      ifelse(SP_CODE == "SFL", red.fun(WM_GM2), NA))) %>%

@@ -64,22 +64,9 @@ pred$pow1 <- predict(pow1, newdat = pred)#model prediction for a power law funct
 pow2 <- nls(herbivory_rate ~ a*(biomass^b), data = pf, start = list(a = exp(-1.377), b = 0.29))
 summary(pow2) #This is a nonlinear regression model for the realtionship between biomass and herbivory rate.
 
-
-# sig <- nls2::nls2(herbivory_rate ~ (biomass^(1+q) * a) / (1 + a*h*biomass^(1+q)), data = pf, start = list(a = 0.1, h = 1.5, q = 0), algorithm = "port") # coulnd't get this parameterization to work
-# summary(sig) 
-
 sig <- nls(herbivory_rate ~ (a * biomass^2) / (b^2 + biomass^2), data = pf, start = list(a = 10, b = 1000)) # this is an alternative parameterization based on Bolker et al. 2008, bestiary of functions p. 22. "a" is similar to handling time, and b is similar to attack rate in this parameterization.
 summary(sig)
 pred$sig <- predict(sig, newdata = pred) 
-
-
-
-#fit <- nls(herbivory_rate ~ (a*(kelp_in_total/1.587165)*(biomass^(-1*m))), data = pf, list(a = 0.02, m = 1)) # this is a form based on Arditi-Akcakaya model that includes resource density and consumer biomass. Supposedly negative values of m suggest facilitation in consumption by consumers...
-
-#summary(fit)
-
-#pred2 <- data.frame(kelp_in_total = 250/1.587165, biomass = seq(min(pf$biomass), max(pf$biomass), length.out = 1000))
-#pred2$fit <- predict(fit, newdata = pred2)
 
 
 AIC(lm1, exp1, pow2, sig) #comparing models
@@ -138,15 +125,15 @@ ggplot(pf, aes(x = abundance, y = herbivory_rate))+
 # package segments seems like it might be a good option
 
 
-lm1 <- lm(herbivory_rate ~ biomass, pf) #linear regression modeling herbivory rate as a function of biomass
-summary(lm1)
+lm1.b <- lm(herbivory_rate ~ biomass, pf) #linear regression modeling herbivory rate as a function of biomass
+summary(lm1.b)
 library(segmented)
 
 # my.seg <- segmented(lm1, 
 #                     seg.Z = ~ biomass, 
 #                     psi = NA)
 
-my.seg <- segmented(lm1, 
+my.seg <- segmented(lm1.b, 
                     seg.Z = ~ biomass, 
                     psi = list(biomass = c(1200))) #where does the 1200 come from? #How is this model predicting a breakpoint? 
 
@@ -177,22 +164,19 @@ lm1.r <- lm(herbivory_rate ~ 0 + biomass, rf)#linear model representing herbivor
 summary(lm1.r)
 modelassump(lm1.r)
 
-exp1 <- lm(herbivory_rate ~ biomass + I(biomass^2), rf)
+exp1.r <- lm(herbivory_rate ~ biomass + I(biomass^2), rf)
 summary(exp1) #exponential regression of herbivory rate as a function of biomass
 
 pred3 <- data.frame(biomass = seq(min(rf$biomass), max(rf$biomass), length.out = 1000))
-pred3$lm <- predict(lm1.r, newdata = pred3) #linear model predictions.
-pred3$exp1 <- predict(exp1, newdata = pred3) #exponential model predictions
+pred3$lm1.r <- predict(lm1.r, newdata = pred3) #linear model predictions.
+pred3$exp1.r <- predict(exp1.r, newdata = pred3) #exponential model predictions
 
-sig <- nls2::nls2(herbivory_rate ~ (biomass^(1+q) * a) / (1 + a*h*biomass^(1+q)), data = rf, start = list(a = 0.1, h = 1.5, q = 0), algorithm = "port") # coulnd't get this parameterization to work #Can you test a nonlinearity like you did for the purples? 
-summary(sig) 
+sig.r <- nls(herbivory_rate ~ (a * biomass^2) / (b^2 + biomass^2), data = rf, start = list(a = 10, b = 1000)) # this is an alternative parameterization based on Bolker et al. 2008, bestiary of functions p. 22. "a" is similar to handling time, and b is similar to attack rate in this parameterization.
+summary(sig.r)
 
-sig <- nls(herbivory_rate ~ (a * biomass^2) / (b^2 + biomass^2), data = rf, start = list(a = 10, b = 1000)) # this is an alternative parameterization based on Bolker et al. 2008, bestiary of functions p. 22. "a" is similar to handling time, and b is similar to attack rate in this parameterization.
+pred3$sig.r <- predict(sig.r, newdata = pred3)
 
-summary(sig)
-pred3$sig <- predict(sig, newdata = pred3)
-
-AIC(lm1.r, exp1, sig)
+AIC(lm1.r, exp1.r, sig.r)
 # So it seems that there is no evidence for any differences between linear and sigmoidal curves. 
 
 model_compare3 <- ggplot(rf, aes(x = biomass, y = herbivory_rate))+
@@ -210,8 +194,8 @@ model_compare3 <- ggplot(rf, aes(x = biomass, y = herbivory_rate))+
 temp1 <- pred %>% gather(model, prediction, -biomass) %>% mutate(sp = "Purple urchin") 
 temp2 <- pred3 %>% gather(model, prediction, -biomass) %>% mutate(sp = "Red urchin")
 
-gg <- bind_rows(temp1, temp2) %>% filter(model != "exp1", model != "pow1") #eliminating the exp and pow function predictions
-gg$Model <- ifelse(gg$model == "lm", "Linear", "Sigmoid") #what is ifelse? #including the linear and sigmoidal models. 
+gg <- bind_rows(temp1, temp2) %>% filter(!model %in% c("exp1", "pow1", "exp1.r")) #eliminating the exp and pow function predictions
+gg$Model <- ifelse(gg$model == "lm" | gg$model == "lm1.r", "Linear", "Sigmoid") #what is ifelse? #including the linear and sigmoidal models. 
 df$sp <- ifelse(df$p_r == "p", "Purple urchin", "Red urchin")  
 
 
