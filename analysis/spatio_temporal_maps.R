@@ -9,7 +9,7 @@ library(lmer)
 library(lmerTest)
 source(here("analysis", "Functions.R"))
 library(car) 
-source(here("analysis", "Functions.R"))
+source(here("analysis/", "density_analysis.R"))
 #source(here("analysis", "Functions.R")) linked to exp analysis so we can extract model predicitons
 
 #We are going to make a map to visually respresent the predicted herbivory pressure of the 9 LTER coastal sites predicted by the models created int eh size and density analysis
@@ -25,11 +25,11 @@ names(lt) <- tolower(names(lt))
 sites <- read.csv(here("data/spatial", "lter_waypoints.csv")) 
 
 purple.fun <- function(biomass){
-  0.023482*biomass
+  coef(lm1)[1]*biomass
 } # this is the herbivory rate model prediction formed from the density analysis for purple urchins
 
 red.fun <- function(biomass){
-  0.009042*biomass
+  coef(lm1.r)[1]*biomass
 } # this is the herbivory rate model prediction formed from the density analysis for red urchins
 
 #-----------------------------------------------------------------
