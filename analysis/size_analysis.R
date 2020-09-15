@@ -11,6 +11,12 @@
 ## Setup and cleaning
 # --------------------------------------------------------------------------------------------------
 
+library(here)
+library(tidyverse)
+source(here("analysis", "Functions.R"))
+library(car)
+
+
 # size and weight data for purple urhcins. 6 size bins in 10 mm increments from 10 mm-69 mm were tested over two weeks. 7 urchins per tank with 7 replicates per size bin. Total of 294 urchins in 42 trials.
 
 pf <- read.csv("data/size_experiment/raw/purple_urchin_size_data_raw_c.csv") %>% 
@@ -51,10 +57,12 @@ rf <- rf[, col_order] #reordering the columns so that the red and purple datafra
 
 df <- bind_rows(pf, rf) %>%
 mutate(id = as.numeric(as.factor(paste(trial_id, round, sp, sep = "")))) %>%
-  roup_by(id, sp, abundance, kelp_in, kelp_out, use, round, time_ran) %>%
+  group_by(id, sp, abundance, kelp_in, kelp_out, round, time_ran) %>%
   summarize(mean.size = mean(size), 
-            biomass = sum(weight)) %>%
-  mutate(herbivory_rate = ((kelp_in - kelp_out)/time_ran)*24) %>%
+            biomass = sum(weight), 
+            mean.biomass = mean(weight)) %>%
+  mutate(herbivory_rate = ((kelp_in - kelp_out)/time_ran)*24, 
+         percap.herb_rate = herbivory_rate / abundance)
   
 
 # --------------------------------------------------------------------------------------------------
@@ -150,4 +158,50 @@ fig3 <- ggplot(df, aes(x = mean.size, y = herbivory_rate))+
   theme(strip.background = element_blank())
 
 ggsave("figures/herbivoryXsize_fig3.png", fig3, device = "png")
+
+
+
+#--------------------------------------------------------------------------------
+## MTE scaling predictions - BART scrap
+#--------------------------------------------------------------------------------
+
+plot(herbivory_rate ~ biomass, p)
+
+mte <- lm(log(herbivory_rate) ~ log(biomass), p)
+summary(mte)
+
+newdat <- data.frame(biomass = seq(min(p$biomass, na.rm = T), max(p$biomass, na.rm = T), length.out = 1000))
+newdat$pred <- predict(mte, newdata = newdat, se.fit = T)[[1]]
+newdat$pred.se <- predict(mte, newdata = newdat, se.fit = T)[[2]]
+newdat$mte <- newdat$biomass^0.75
+
+plot(log(herbivory_rate) ~ log(biomass), p)
+lines(pred ~ log(biomass), newdat)
+
+plot(herbivory_rate ~ biomass, p, ylab = expression(paste("Herbivory rate (g"['kelp']*"d"^"-1"*")")), xlab = "Total biomass")
+lines(exp(pred) ~ biomass, newdat)
+lines(exp(pred + pred.se) ~ biomass, newdat, lty =4, col = "gray")
+lines(exp(pred - pred.se) ~ biomass, newdat, lty = 4, col = "gray")
+abline(lm)
+
+lm <- lm(herbivory_rate ~ biomass, p)
+
+AIC(mte, lm) # looks like the power law function is much better!
+
+plot(I(herbivory_rate/biomass) ~ biomass, p)
+
+summary(lm(log(I(herbivory_rate/biomass)) ~ log(biomass), p))
+
+
+df %>%
+  filter(sp == "p") %>%
+  ggplot(aes(y = percap.herb_rate, x = mean.biomass))+
+  geom_point()
+
+df %>%
+  filter(sp == "p") %>%
+  ggplot(aes(y = herbivory_rate, x = biomass))+
+  geom_point()
+
+summary(lm(log(percap.herb_rate) ~ log(mean.biomass), df[df$sp == "p", ]))
 
