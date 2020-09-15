@@ -199,11 +199,11 @@ gg$Model <- ifelse(gg$model == "lm" | gg$model == "lm1.r", "Linear", "Sigmoid") 
 df$sp <- ifelse(df$p_r == "p", "Purple urchin", "Red urchin")  
 
 
-fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
+ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_jitter(color = "white", pch = 21, show.legend = F)+
   geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=0, ymax=Inf), color = "gray90", fill = "gray90")+ # 688gm^-2 is the transition denisty cited in Ling et. al 2015 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
   geom_vline(xintercept = 668, linetype = 4)+
-  geom_jitter(aes(fill = sp), pch = 21, show.legend = F)+
+  geom_jitter(aes(fill = sp), pch = 21, show.legend = F, size=4)+
   scale_fill_manual(values = c("#762a83", "#d73027"))+
   geom_line(data = gg, aes(x = biomass, y = prediction, color = Model, linetype = Model))+
   #scale_color_manual(c("#0B61A4", "#FF9200"))+
