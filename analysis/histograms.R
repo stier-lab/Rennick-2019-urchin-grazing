@@ -39,26 +39,82 @@ ggsave("figures/urchinsize_densityhisto.png", dh, device = "png")
 
 # Get density data
 
-lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER dataset: urchin desnity data collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel. (what are strings?)
+lt_1 <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER dataset: urchin desnity data collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel. (what are strings?)
   dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "WM_GM2") %>%
-  filter(SP_CODE == "SPL" | SP_CODE == "SFL") %>% #filtering for only pruple and red urchins
+  filter(SP_CODE == "SPL" ) %>% #filtering for only purple urchins
   filter(SITE != "SCTW", SITE != "SCDI") %>% #Removing two island sites. We are only working with coastal sites. 
   group_by(YEAR, MONTH, SITE, TRANSECT) %>%
   spread(SP_CODE, WM_GM2) %>% #dividing purple and red urhcin densities into their own respective columns.
   rename_all(tolower) %>%
-  mutate(urc.biomass = spl + sfl) #red+purple urchin densities combined into a total urchin biomass column.
+  mutate(urc.biomass = spl) %>% #purple urchin densities combined into a total urchin biomass column.
+  mutate(urchin='purple')
 
-dh.d <- ggplot(lt, aes(x = urc.biomass))+
-  geom_density(fill = NA, color = NA )+
-  geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=0, ymax=Inf), color = "gray90", fill = "gray90")+ # 688gm^-2 is the transition denisty cited in Ling et. al 2016 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
+
+lt_2<- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER dataset: urchin desnity data collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel. (what are strings?)
+  dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "WM_GM2") %>%
+  filter(SP_CODE == "SFL") %>% #filtering for only pruple and red urchins
+  filter(SITE != "SCTW", SITE != "SCDI") %>% #Removing two island sites. We are only working with coastal sites. 
+  group_by(YEAR, MONTH, SITE, TRANSECT) %>%
+  spread(SP_CODE, WM_GM2) %>% #dividing purple and red urhcin densities into their own respective columns.
+  rename_all(tolower) %>%
+  mutate(urc.biomass = sfl) %>% #red+purple urchin densities combined into a total urchin biomass column.
+  mutate(urchin='red')
+
+######################################################################################################Figure 1
+######################################################################################################
+
+lt<- rbind(lt_1, lt_2)
+
+dh.d<-ggplot(lt, aes(x = urc.biomass))+
+  geom_density(aes(fill = urchin), alpha = 0.75, adjust = 2)+
+  scale_fill_manual(values = c("#550f7a", "#E3493B"))+
+  geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=0, ymax=Inf), color = "gray90", fill = "gray90", alpha = 1/60)+ # 688gm^-2 is the transition denisty cited in Ling et. al 2016 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
   geom_vline(xintercept = 668, linetype = 4)+ 
-  geom_density(fill = "#a8325e", alpha = 0.8)+
-  labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = "Density" )+
-  theme_pubclean() #histogram looking at the relationship of urchin density as a product of combined urchin biomass. 
+  labs(x = expression(paste("Urchin Biomass (g m"^"-2"*")")), y = "Density" )+
+  theme_pubclean()+ #histogram looking at the relationship of urchin density as a product of combined urchin biomass. 
+  theme(axis.text=element_text(size=12))+
+  theme(legend.title=element_blank())+
+  theme(legend.position = c(0.9,0.85))+
+  theme(axis.title.x= element_text(color= "black", size=20),
+        axis.title.y= element_text(color= "black", size=20))+
+  theme(legend.text=element_text(size=10))+
+  expand_limits(y = 0.006)+
+  coord_flip()+
+  theme(axis.text = element_text(size = 15))
 
 ggsave("figures/urchindensity_densityhisto.png", dh.d, device = "png")
 
-p1 <- cowplot::plot_grid(dh.d, dh+labs(y = ""), align = "h", rel_widths = c(0.75, 1 )) #combining histograms to display the relationship between red and purple urchin size (individually) and density, in addition to combined urhcin biomass and density. 
+
+lt_3<- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER data density estimations collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel.
+  dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "WM_GM2") %>%
+  filter(SP_CODE %in% c("SFL", "SPL"))%>% #filtering the data to only include giant kelp, purple urchins, and red urchins
+  filter(SITE != "SCTW", SITE != "SCDI") %>% 
+  #Filtering out island sites. This study focuses on costal sites.
+  rename_all(tolower) %>% 
+  group_by(year, month, site, transect, sp_code) %>% 
+  spread(sp_code, wm_gm2) %>% 
+  mutate(total_biomass= SFL+SPL) %>% 
+  group_by(year,site) %>%
+  summarize(biomass = mean(total_biomass, na.rm = T))
+
+dl.d<-ggplot(lt_3, aes(x =year, y=biomass, colour=site))+
+  geom_line()+
+  scale_color_manual(values=c("#EEBA4C", "#E3493B", "#23B5AF", "#A83B05",
+    "#A9DDD9", "#085F63", "#ff9248", "#448B66", "#2D8AB7", "#A9DDD9"))+
+  labs(x= "Year", y= expression(paste("Urchin Biomass (g m"^"-2"*")")))+
+  theme_pubclean()+
+  theme(axis.text=element_text(size=12))+
+  theme(legend.title=element_blank())+
+  theme(axis.title.x= element_text(color= "black", size=20),
+        axis.title.y= element_text(color= "black", size=20))+
+  theme(legend.text=element_text(size=10))+
+  theme(legend.background = element_rect( 
+                                         size=0.5, linetype ="solid"))+
+  theme(legend.position="right")+
+  theme(axis.text = element_text(size = 15))+
+  coord_cartesian(clip = "off")
+
+p1 <- cowplot::plot_grid(dh.d, dl.d, align = "h", labels = c('A', 'B'), rel_heights = c(0.75, 1 )) # combining histograms to display the relationship between red and purple urchin size (individually) and density, in addition to combined urhcin biomass and density. 
 
 ggsave("figures/urchinhistos.png", p1, device = "png", width = 10, height = 4)
 
