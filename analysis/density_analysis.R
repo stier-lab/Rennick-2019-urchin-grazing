@@ -199,18 +199,30 @@ gg$Model <- ifelse(gg$model == "lm" | gg$model == "lm1.r", "Linear", "Sigmoid") 
 df$sp <- ifelse(df$p_r == "p", "Purple urchin", "Red urchin")  
 
 
-ggplot(df, aes(x = biomass, y = herbivory_rate))+
+fig2<-ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_jitter(color = "white", pch = 21, show.legend = F)+
   geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=0, ymax=Inf), color = "gray90", fill = "gray90")+ # 688gm^-2 is the transition denisty cited in Ling et. al 2015 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
   geom_vline(xintercept = 668, linetype = 4)+
-  geom_jitter(aes(fill = sp), pch = 21, show.legend = F, size=4)+
-  scale_fill_manual(values = c("#762a83", "#d73027"))+
-  geom_line(data = gg, aes(x = biomass, y = prediction, color = Model, linetype = Model))+
+  geom_jitter(aes(fill = sp), pch = 21, show.legend = F, size=3)+
+  geom_smooth(method=lm, size=0, fill="gray90")+
+  #stat_smooth(method="lm",fill=NA,colour="black",linetype=2,geom="ribbon")+
+  scale_fill_manual(values = c("#550f7a", "#E3493B"))+
+  geom_line(data = gg, aes(x = biomass, y = prediction, color = Model, linetype = Model),size=1)+
   #scale_color_manual(c("#0B61A4", "#FF9200"))+
   facet_wrap(~sp)+
+  theme(strip.text = element_text(size = 10))+
   ggpubr::theme_pubclean()+
   labs(x = expression(paste("Urchin biomass density (g m"^"-2"*")")), y = expression(paste("Herbivory rate (g m"^"-2"*"d"^"-1"*")")), color = "", linetype = "")+
-  theme(strip.background = element_blank())
+  theme(strip.background = element_blank())+
+  theme(legend.position = c(.90,.90))+
+  theme(legend.title=element_blank())+
+  theme(axis.title.x= element_text(color= "black", size=20),
+        axis.title.y= element_text(color= "black", size=20))+
+  theme(legend.text=element_text(size=10))+
+  theme(legend.background = element_rect( 
+    size=0.5, linetype ="solid"))+
+  theme(axis.text = element_text(size = 15))+
+  theme(legend.text=element_text(size=15))
   
 ggsave("figures/herbivoryXdensity_fig2.png", fig2, device = "png")
 
