@@ -88,8 +88,7 @@ lt <- lt %>%
   drop_na(MAPY) %>%
   mutate(detritus.production = av * MAPY, 
          dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
-         difference = detritus.production - predicted.consumption, 
-         urc = SPL + SFL) #if its negative that means that the urhins are eating more than is available in detritus by that much g/hr? 
+         urc = SPL + SFL)
 
 
 # comparison of kelp biomass across all sites/years with kelp biomass at sites with urchin biomass in the 90% percentile
@@ -157,6 +156,40 @@ modelassump(lmer3) # this model has considerable issues and describes the data p
 #       summary(glmer3)
 #       modelassump(glmer3)
 
+# UPDATED 10/1/2020 BD: OK so our hypothesis is that urchin and living kelp biomass are decoupled under conditions when detrital supply is high. Therefore, we predict that the balance of consumption rate and detrial supply will explain kelp biomass dynamics better than urchin biomass alone. To test this we will build a model of kelp biomass ~ urchin biomass and compare that to a model of kelp biomass ~ urchin biomass +/* dummy factor
+
+lt <- lt %>% mutate(urc.biomass = SFL + SPL)
+
+lmer4 <- lmer(MAPY ~ urc.biomass * dummy + (1|site) + (1|year), data = lt)
+summary(lmer4)
+modelassump(lmer4)
+
+lmer4.1 <- lmer(MAPY ~ urc.biomass + dummy + (1|site) + (1|year), data = lt)
+summary(lmer4.1)
+modelassump(lmer4.1)
+    
+    #The distribution of the response is relatively tricky. Zero-inflated to some extent... these are some models attempting to refine the fit.
+    glm4.1.a <- glm(I(MAPY+1) ~ urc.biomass + dummy, data = lt, family = Gamma(link = "log"))
+    summary(lmer4.1.a)
+    modelassump(lmer4.1.a)
+    
+    lmer4.1.b <- lmer(log(MAPY+1) ~ urc.biomass + dummy + (1|site) + (1|year), data = lt)
+    summary(lmer4.1.b)
+    modelassump(lmer4.1.b)
+    
+    glmer4.1.c <- glm(MAPY ~ scale(urc.biomass) + dummy , family = gaussian(link = "log"), data = lt)
+    summary(glmer4.1.c)
+    modelassump(glmer4.1.c)
+    
+
+lmer4.2 <- lmer(MAPY ~ urc.biomass + (1|site) + (1|year), data = lt)
+summary(lmer4.2)
+modelassump(lmer4.2)
+
+AIC(lmer4,lmer4.1, lmer4.2)
+anova(lmer4,lmer4.1)
+anova(lmer4.1, lmer4.2)
+
 newdat <- data.frame(predicted.consumption = seq(min(lt$predicted.consumption), max(lt$predicted.consumption), length.out = 1000))
 newdat$y <- predict(lmer3, newdata = newdat, re.form = NA)
 newdat <- newdat[newdat$y > 0, ]
@@ -169,11 +202,11 @@ newdat <- newdat[newdat$y > 0, ]
 # 2 panel plot with (a) the relationship between kelp biomass and urchin biomass with points colored by if consumption > detritus, and fit with the model between kelp biomass and urchin biomass. Panel b is the boxplot showing that kelp biomass is less when detritus < consumption. 
 
 
-p1 <- ggplot(lt, aes(x = predicted.consumption, y = MAPY))+
+p1 <- ggplot(lt, aes(x = SPL + SFL, y = MAPY))+
   geom_jitter(aes(color = dummy), pch = 21)+
   scale_color_manual(values = c("#8f4811", "#35753d"))+
-  geom_line(data = newdat, aes(x = predicted.consumption , y = y)) +
-  labs(x = expression(paste("Consumption rate (g m"^"-2"*"d"^"-1"*")")), y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), color = "")+
+  # geom_line(data = newdat, aes(x = predicted.consumption , y = y)) +
+  labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), color = "")+
   ggpubr::theme_pubclean()
 
 p2 <- ggplot(lt, aes(x = dummy, y = MAPY))+
@@ -224,5 +257,71 @@ range(lt$predicted.consumption)
 
 lt %>% group_by(site) %>% summarize(cv.space = sd(predicted.consumption)/mean(predicted.consumption)) %>% summarize(mean(cv.space), sd(cv.space))
 lt %>% group_by(year) %>% summarize(cv.time = sd(predicted.consumption)/mean(predicted.consumption)) %>% summarize(mean(cv.time), sd(cv.time))
+
+#------------------------------------------------------
+## Ratio dependent plots 
+#------------------------------------------------------
+
+lt2 <- lt %>%
+  mutate(ratio = predicted.consumption / detritus.production, 
+         diff = predicted.consumption - detritus.production, 
+         per.diff = (predicted.consumption - detritus.production) / (predicted.consumption + detritus.production)) %>%
+  arrange(site, transect, year) %>%
+  ungroup() %>%
+  group_by(site, transect) %>%
+  mutate(deltaK = MAPY - lag(MAPY, order_by = year))
+
+
+lmer6 <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2)
+summary(lmer6)
+
+newdat <- data.frame(per.diff = seq(min(lt2$per.diff, na.rm = T), max(lt2$per.diff, na.rm = T), length.out = 1000))
+newdat$y <- predict(lmer6, newdata = newdat, re.form = NA)
+
+
+mm<-model.matrix(~per.diff,data=newdat)
+predFun<-function(.) mm%*%fixef(.)
+bb<-bootMer(lmer6,FUN=predFun,nsim=200) #do this 200 timesCopy
+#As we did this 200 times the 95% CI will be bordered by the 5th and 195th value:
+  
+bb_se<-apply(bb$t,2,function(x) x[order(x)][c(5,195)])
+newdat$LC<-bb_se[1,]
+newdat$UC<-bb_se[2,] 
+
+
+lmer6.low <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2[lt2$per.diff < 0, ])
+summary(lmer6.low)
+
+lmer6.high <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2[lt2$per.diff >= 0, ])
+summary(lmer6.high)
+
+lt2 %>% filter(urc.biomass != 0) %>%
+ggplot(aes(x = per.diff, y = deltaK))+
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 11, name = "RdBu"))+
+  geom_point(aes(size = urc.biomass, fill = deltaK), pch = 21)+
+  geom_line(data = newdat, aes(x = per.diff, y = y))+
+  geom_ribbon(data = newdat, aes(x = per.diff, ymin = LC, ymax = UC, y = y), alpha = .2) +
+  # geom_line(data = newdat, aes(x = per.diff, y = LC), lty = 4)+
+  # geom_line(data = newdat, aes(x = per.diff, y = UC), lty = 4)+
+  geom_hline(yintercept = 0, lty = 3)+
+  geom_vline(xintercept = 0, lty = 3)+
+  labs(x = "Proportional difference between\nconsumption and detrial supply rate", 
+       y = "delta Kelp biomass", 
+       size = "Urchin biomass\ndensity")+
+  ggpubr::theme_pubr(legend = "right")
+                    
+
+
+#------------------------------------------------------
+## Lag plots
+#------------------------------------------------------
+
+ggplot(lt, aes(x = urc.biomass, y = lead(MAPY, n = 1)))+
+  geom_jitter(aes(color = dummy), pch = 21)+
+  scale_color_manual(values = c("#8f4811", "#35753d"))+
+  # geom_line(data = newdat, aes(x = predicted.consumption , y = y)) +
+  labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), color = "")+
+  ggpubr::theme_pubclean()
+
 
 
