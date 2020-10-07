@@ -279,6 +279,8 @@ newdat <- data.frame(per.diff = seq(min(lt2$per.diff, na.rm = T), max(lt2$per.di
 newdat$y <- predict(lmer6, newdata = newdat, re.form = NA)
 
 
+# This is copied and pasted from https://datascienceplus.com/introduction-to-bootstrap-with-applications-to-mixed-effect-models/. Not sure if I fully understand or trust the code, but it will suffice for now. The mean tendency is fine, but I'm not entire sure about the CI's.
+
 mm<-model.matrix(~per.diff,data=newdat)
 predFun<-function(.) mm%*%fixef(.)
 bb<-bootMer(lmer6,FUN=predFun,nsim=200) #do this 200 timesCopy
