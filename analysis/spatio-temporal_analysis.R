@@ -32,13 +32,11 @@ lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", st
   filter(SITE != "SCTW", SITE != "SCDI") %>% 
   #Filtering out island sites. This study focuses on costal sites.
   rename_all(tolower) %>% 
-  group_by(year, month, site, transect, sp_code) %>% 
+  group_by(year, month, site, transect, sp_code) %>%
   spread(sp_code, wm_gm2) %>%
   mutate(SFL.pred = red.fun(SFL),
          SPL.pred = purple.fun(SPL), 
          predicted.consumption = (SPL.pred + SFL.pred))
-
-
 
 ## Time series analysis
 # -----------------------------------------------------
@@ -49,7 +47,7 @@ p1 <- lt %>% #LTER data
   group_by(year, site) %>%
   summarize(biomass = mean(MAPY, na.rm = T))%>% #adding a biomass column
   ggplot(aes(x = year, y = biomass))+
-  geom_line(aes(color = site))+
+  geom_line(aes(color = c(site, transect)))+
   labs(y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), x = "")+
   ggpubr::theme_pubr(legend = "right")
 
@@ -269,7 +267,11 @@ lt2 <- lt %>%
   arrange(site, transect, year) %>%
   ungroup() %>%
   group_by(site, transect) %>%
-  mutate(deltaK = MAPY - lag(MAPY, order_by = year))
+  arrange(site,transect, year) %>%
+  mutate(deltaK = MAPY - lag(MAPY, order_by = year)) %>% 
+  filter(urc.biomass != 0, 
+         deltaK != 0 & MAPY != 0) %>%
+  arrange(site,transect, year)
 
 
 lmer6 <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2)
@@ -291,16 +293,18 @@ newdat$LC<-bb_se[1,]
 newdat$UC<-bb_se[2,] 
 
 
-lmer6.low <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2[lt2$per.diff < 0, ])
-summary(lmer6.low)
+# lmer6.low <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2[lt2$per.diff < 0, ])
+# summary(lmer6.low)
+# 
+# lmer6.high <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2[lt2$per.diff >= 0, ])
+# summary(lmer6.high)
 
-lmer6.high <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2[lt2$per.diff >= 0, ])
-summary(lmer6.high)
-
-lt2 %>% filter(urc.biomass != 0) %>%
+lt2 %>%
 ggplot(aes(x = per.diff, y = deltaK))+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 11, name = "RdBu"))+
-  geom_point(aes(size = urc.biomass, fill = deltaK), pch = 21)+
+  #scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 11, name = "RdBu"))+
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 9, name = "Greens"), trans = "log10")+
+  geom_point(aes(size = urc.biomass, fill = MAPY, color = dummy2), pch = 21)+
+  scale_color_manual(values = c("blue", "red"))+
   geom_line(data = newdat, aes(x = per.diff, y = y))+
   geom_ribbon(data = newdat, aes(x = per.diff, ymin = LC, ymax = UC, y = y), alpha = .2) +
   # geom_line(data = newdat, aes(x = per.diff, y = LC), lty = 4)+
@@ -309,7 +313,9 @@ ggplot(aes(x = per.diff, y = deltaK))+
   geom_vline(xintercept = 0, lty = 3)+
   labs(x = "Proportional difference between\nconsumption and detrial supply rate", 
        y = "delta Kelp biomass", 
-       size = "Urchin biomass\ndensity")+
+       size = "Urchin biomass\ndensity", 
+       color = "", 
+       fill = "Kelp biomass\nin year t")+
   ggpubr::theme_pubr(legend = "right")
                     
 
@@ -324,6 +330,69 @@ ggplot(lt, aes(x = urc.biomass, y = lead(MAPY, n = 1)))+
   # geom_line(data = newdat, aes(x = predicted.consumption , y = y)) +
   labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), color = "")+
   ggpubr::theme_pubclean()
+
+
+#----------------------------------------------------
+## Time series plots
+#----------------------------------------------------
+
+pd <- position_dodge(0.4)
+
+p3b <- lt %>% #LTER data 
+  mutate(id = paste(site,transect,"-")) %>%
+  ggplot(aes(x = year, y = MAPY))+
+  geom_line(aes(group = id), position = pd, color = alpha("black", 0.5))+
+  geom_point(aes(group = id, color = dummy, fill = dummy, alpha = dummy, shape = dummy2), show.legend = F, position = pd, size = 3)+
+  scale_shape_manual(values = c(21,24))+
+  scale_color_manual(values = c("black", "black"))+
+  scale_alpha_manual(values = c(0.75, 0))+
+  scale_fill_manual(values = c("red", "black"))+
+  stat_summary(fun = mean, geom = "line", lwd = 2, col = "forestgreen")+
+  labs(fill = "", y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), x = "")+
+  ggpubr::theme_pubclean()
+
+
+ggsave(here::here("figures/p3b.png"), p3b, device = "png", width = 12, height = 3)
+
+
+p3c <- lt %>% #LTER data 
+  mutate(id = paste(site,transect,"-")) %>%
+  ggplot(aes(x = year, y = predicted.consumption))+
+  geom_line(aes(group = id), position = pd, color = alpha("black", 0.5))+
+  geom_point(aes(group = id, color = dummy, fill = dummy, alpha = dummy, shape = dummy2), show.legend = F, position = pd, size = 3)+
+  scale_shape_manual(values = c(21,24))+
+  scale_color_manual(values = c("black", "black"))+
+  scale_alpha_manual(values = c(0.75, 0))+
+  scale_fill_manual(values = c("red", "black"))+
+  stat_summary(fun = mean, geom = "line", lwd = 2, col = "forestgreen")+
+  labs(y = expression(paste("Predicted kelp consumption (g m"^"-2"*"d"^"-1"*")")), x = "")+
+  ggpubr::theme_pubclean()
+
+ggsave(here::here("figures/p3c.png"), p3c, device = "png", width = 12, height = 3)
+
+cowplot::plot_grid(p3b,p3c, ncol = 1, align = "v")
+ggsave(here::here("figures/p3bc.png"), device = "png", width = 12, height = 6)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
