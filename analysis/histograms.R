@@ -68,19 +68,19 @@ lt<- rbind(lt_1, lt_2)
 dh.d<-ggplot(lt, aes(x = urc.biomass))+
   geom_density(aes(fill = urchin), alpha = 0.75, adjust = 2)+
   scale_fill_manual(values = c("#550f7a", "#E3493B"))+
-  geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=0, ymax=Inf), color = NA, fill = "gray90", alpha = 1/60)+ # 688gm^-2 is the transition denisty cited in Ling et. al 2016 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
+  geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=0, ymax=Inf), color = "gray90", fill = "gray90", alpha = 1/60)+ # 688gm^-2 is the transition denisty cited in Ling et. al 2016 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
   geom_vline(xintercept = 668, linetype = 4)+ 
   labs(x = expression(paste("Urchin Biomass (g m"^"-2"*")")), y = "Density" )+
   theme_pubclean()+ #histogram looking at the relationship of urchin density as a product of combined urchin biomass. 
   theme(axis.text=element_text(size=12))+
   theme(legend.title=element_blank())+
-  theme(legend.position = c(0.9,0.85))+
+  theme(legend.position = c(0.2,0.85))+
   theme(axis.title.x= element_text(color= "black", size=20),
         axis.title.y= element_text(color= "black", size=20))+
   theme(legend.text=element_text(size=10))+
   expand_limits(y = 0.006)+
-  coord_flip()+
-  theme(axis.text = element_text(size = 15))
+  theme(axis.text = element_text(size = 15))+
+  scale_x_log10()
 
 ggsave("figures/urchindensity_densityhisto.png", dh.d, device = "png")
 

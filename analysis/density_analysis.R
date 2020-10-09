@@ -35,7 +35,24 @@ ggplot(df, aes(x = biomass, y = herbivory_rate))+
   facet_wrap(~p_r)+
   ggpubr::theme_pubclean() #visual comparison of how the biomas of red and purple urchins affects herbivory rate.
 
+###summary statistics 
+df_p<-df %>% 
+  filter(p_r=='p')
 
+df_r<-df %>% 
+  filter(p_r=='r')
+
+bmassp=df_p$biomass
+bmassr=df_r$biomass
+
+max(bmassr)
+min(bmassr)
+
+max(bmassp)
+min(bmassp)
+
+kc=df$kelp_consumed
+max(kc)
 
 # ------------------------------------------------------------------------------------------------
 ## Purple Analaysis
@@ -287,4 +304,5 @@ hl <- ggplot(pf, aes(x = biomass, y = herbivory_rate))+
   theme(strip.background = element_blank())
 
 ggsave(here("figures", "hunter-talk.png"), hl, device = "png", width = 5, height = 3.8)
+
 
