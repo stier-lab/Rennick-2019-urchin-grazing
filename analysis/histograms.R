@@ -118,6 +118,10 @@ p1 <- cowplot::plot_grid(dh.d, dl.d, align = "h", labels = c('A', 'B'), rel_heig
 
 ggsave("figures/urchinhistos.png", p1, device = "png", width = 10, height = 4)
 
+
+
+ggplot(lt_3, aes(x = ))
+
 #----------------------------------
 ## Summary stats for paper
 #----------------------------------

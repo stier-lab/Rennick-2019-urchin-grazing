@@ -106,6 +106,9 @@ ggplot(pf, aes(x = biomass, y = herbivory_rate/biomass))+
 lin_mod <- lm(I(herbivory_rate/biomass) ~ biomass, pf) #Linear model tracking per capita(?) herbivory rate?
 summary(lin_mod) #High p value and low R2 value. Cannot prove that the slope is different from zero which means there is no evidence for a nonlinearity. 
 
+exp_mod <- lm(I(herbivory_rate/biomass) ~ biomass + I(biomass^2), pf)
+summary(exp_mod)
+
 # does the same pattern apply with abundance (not biomass)
 
 lm2 <- lm(herbivory_rate ~ abundance, pf) #linear regression of abundance v herbivory rate
@@ -133,40 +136,6 @@ ggplot(pf, aes(x = abundance, y = herbivory_rate))+
   geom_vline(xintercept = coef(sig2)[2], lty = "dashed")+ 
   ggpubr::theme_pubclean() 
 
-
-#-----------------------------------------------------------------------------------------
-## Breakpoint analysis
-
-# package strucchange can only can only be used for time series and ordered data
-
-# package segments seems like it might be a good option
-
-
-lm1.b <- lm(herbivory_rate ~ biomass, pf) #linear regression modeling herbivory rate as a function of biomass
-summary(lm1.b)
-library(segmented)
-
-# my.seg <- segmented(lm1, 
-#                     seg.Z = ~ biomass, 
-#                     psi = NA)
-
-my.seg <- segmented(lm1.b, 
-                    seg.Z = ~ biomass, 
-                    psi = list(biomass = c(1200))) #where does the 1200 come from? #How is this model predicting a breakpoint? 
-
-summary(my.seg) #What is U1? 
-plot(herbivory_rate ~ biomass, pf)
-lines(fitted(my.seg) ~ biomass, pf) #What?.
-
-# get the fitted data
-my.fitted <- fitted(my.seg) #What do these numbers represent? 
-my.model <- data.frame(biomass = pf$biomass, herb = my.fitted) #Are these the model predictions? How does it affect the dataframe? 
-
-# plot the fitted model
-ggplot(my.model, aes(x = biomass, y = herb)) + geom_line()+
-  geom_point(data = pf, aes(x = biomass, y = herbivory_rate)) 
-
-# Doesnt seem like there is much evidence for any breakpoints given the variance in the data
 
 
 # ------------------------------------------------------------------------------------------------
@@ -207,28 +176,31 @@ model_compare3 <- ggplot(rf, aes(x = biomass, y = herbivory_rate))+
 # ------------------------------------------------------------------------------------------------
 ## Figure 2: The relationship between biomass and herbivory rate
 # ------------------------------------------------------------------------------------------------ 
+pred <- data.frame(biomass = seq(min(pf$biomass), max(pf$biomass), length.out = 1000))
+pred$herbivory_rate <- predict(lm1, newdata = pred, interval = "confidence")[,1]
+pred$low <- predict(lm1, newdata = pred, interval = "confidence")[,2]
+pred$high <- predict(lm1, newdata = pred, interval = "confidence")[,3]
+pred$sp <- "Purple urchin"
 
-temp1 <- pred %>% gather(model, prediction, -biomass) %>% mutate(sp = "Purple urchin") 
-temp2 <- pred3 %>% gather(model, prediction, -biomass) %>% mutate(sp = "Red urchin")
+pred.r <- data.frame(biomass = seq(min(rf$biomass), max(rf$biomass), length.out = 1000))
+pred.r$herbivory_rate <- predict(lm1.r, newdata = pred, interval = "confidence")[,1]
+pred.r$low <- predict(lm1.r, newdata = pred, interval = "confidence")[,2]
+pred.r$high <- predict(lm1.r, newdata = pred, interval = "confidence")[,3]
+pred.r$sp <- "Red urchin"
 
-gg <- bind_rows(temp1, temp2) %>% filter(!model %in% c("exp1", "pow1", "exp1.r")) #eliminating the exp and pow function predictions
-gg$Model <- ifelse(gg$model == "lm" | gg$model == "lm1.r", "Linear", "Sigmoid") #what is ifelse? #including the linear and sigmoidal models. 
-df$sp <- ifelse(df$p_r == "p", "Purple urchin", "Red urchin")  
+pred <- bind_rows(pred, pred.r)
 
 
-fig2<-ggplot(df, aes(x = biomass, y = herbivory_rate))+
-  geom_jitter(color = "white", pch = 21, show.legend = F)+
-  geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=0, ymax=Inf), color = "gray90", fill = "gray90")+ # 688gm^-2 is the transition denisty cited in Ling et. al 2015 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
+fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
+  geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=-Inf, ymax=Inf), fill = "gray90", alpha = 0.1)+ # 688gm^-2 is the transition denisty cited in Ling et. al 2015 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
   geom_vline(xintercept = 668, linetype = 4)+
-  geom_jitter(aes(fill = sp), pch = 21, show.legend = F, size=3)+
-  geom_smooth(method=lm, size=0, fill="gray90")+
-  #stat_smooth(method="lm",fill=NA,colour="black",linetype=2,geom="ribbon")+
+  geom_point(aes(fill = sp), pch = 21, show.legend = F, size=3)+
   scale_fill_manual(values = c("#550f7a", "#E3493B"))+
-  geom_line(data = gg, aes(x = biomass, y = prediction, color = Model, linetype = Model),size=1)+
-  #scale_color_manual(c("#0B61A4", "#FF9200"))+
+  geom_line(data = pred, aes( x= biomass, y = herbivory_rate), size = 1)+
+  geom_ribbon(data = pred, aes( ymin = low, ymax = high), alpha = 0.3)+
   facet_wrap(~sp)+
+  theme_classic()+
   theme(strip.text = element_text(size = 10))+
-  ggpubr::theme_pubclean()+
   labs(x = expression(paste("Urchin biomass density (g m"^"-2"*")")), y = expression(paste("Herbivory rate (g m"^"-2"*"d"^"-1"*")")), color = "", linetype = "")+
   theme(strip.background = element_blank())+
   theme(legend.position = c(.90,.90))+
@@ -304,5 +276,52 @@ hl <- ggplot(pf, aes(x = biomass, y = herbivory_rate))+
   theme(strip.background = element_blank())
 
 ggsave(here("figures", "hunter-talk.png"), hl, device = "png", width = 5, height = 3.8)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# #-----------------------------------------------------------------------------------------
+# ## Breakpoint analysis
+# 
+# # package strucchange can only can only be used for time series and ordered data
+# 
+# # package segments seems like it might be a good option
+# 
+# 
+# lm1.b <- lm(herbivory_rate ~ biomass, pf) #linear regression modeling herbivory rate as a function of biomass
+# summary(lm1.b)
+# library(segmented)
+# 
+# # my.seg <- segmented(lm1, 
+# #                     seg.Z = ~ biomass, 
+# #                     psi = NA)
+# 
+# my.seg <- segmented(lm1.b, 
+#                     seg.Z = ~ biomass, 
+#                     psi = list(biomass = c(1200))) #where does the 1200 come from? #How is this model predicting a breakpoint? 
+# 
+# summary(my.seg) #What is U1? 
+# plot(herbivory_rate ~ biomass, pf)
+# lines(fitted(my.seg) ~ biomass, pf) #What?.
+# 
+# # get the fitted data
+# my.fitted <- fitted(my.seg) #What do these numbers represent? 
+# my.model <- data.frame(biomass = pf$biomass, herb = my.fitted) #Are these the model predictions? How does it affect the dataframe? 
+# 
+# # plot the fitted model
+# ggplot(my.model, aes(x = biomass, y = herb)) + geom_line()+
+#   geom_point(data = pf, aes(x = biomass, y = herbivory_rate)) 
+# 
+# # Doesnt seem like there is much evidence for any breakpoints given the variance in the data
 
 
