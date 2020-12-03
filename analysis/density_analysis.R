@@ -27,7 +27,8 @@ df <- read.csv("data/density_experiment/raw/urchin_density_data_raw_c.csv", stri
   group_by(date, p_r, trial_number, trial_id, tank, tank_size, total_time, kelp_in, kelp_out, mortality, kelp_consumed, abundance, herbivory_rate) %>%
   summarize(biomass= sum(urchin_mass )/1.587) %>%
   mutate(urchin_size = NULL, 
-         urchin_mass  = NULL)
+         urchin_mass  = NULL, 
+         sp = ifelse(p_r == "p", "Purple urchin", "Red urchin"))
 
 ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_point(pch = 21)+

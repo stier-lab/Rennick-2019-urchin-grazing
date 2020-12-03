@@ -69,7 +69,9 @@ mp <- lt %>%
 
 mp.mean <- lt %>%
   group_by(site) %>%
-  summarize(pc_mean = mean(predicted.consumption)) %>%
+  summarize(pc_mean = mean(predicted.consumption), 
+            se = sd(predicted.consumption)/n(), 
+            sd = sd(predicted.consumption)) %>%
   left_join(sites %>%
               group_by(site) %>%
               summarize(lat = mean(lat), 
@@ -124,12 +126,12 @@ plot(shoreline, col = "#e6c16c",  xlab = "", ylab = "", cex.axis = 1.5, axes = T
 #plot(all_mpas, pch = 4, col = "#99ebff", add = T, border = "#99ebff") 
 plot(contours, add = T, lwd = 0.25, ext = clipper, col = "gray80")
 plot(patches, col = alpha("#00802b", 0.9), add = T, border = alpha("#00802b", 0))
-plot(mp, pch = 21, add = T, cex = (mp$pc_mean+1), bg = alpha("gray", 0.25), col = NULL)
-plot(mp.mean, pch = 21, add = T, lwd = 2, cex = (mp.mean$pc_mean+1), bg = alpha(mp.mean$col, 0.5))
+plot(mp.mean, pch = 21, add = T, cex = (mp.mean$pc_mean + mp.mean$sd), bg = alpha("black", 0.25), col = NULL)
+plot(mp.mean, pch = 21, add = T, lwd = 2, cex = mp.mean$pc_mean, bg = alpha(mp.mean$col, 0.6))
 plot(mp.mean, pch = 16, add = T, cex = 0.5)
 axis(tcl = -0.5, side = 1, labels = F)
 axis(side = 2, tcl = -0.5, labels = F)
-scalebar(xy = xy, type = "bar", d = 8, divs = 4, lonlat = T, below = "kilometers")
+scalebar(xy = c(-120.45, 34.35), type = "bar", d = 8, divs = 4, lonlat = T, below = "kilometers")
 par(d)
 dev.off()
 
@@ -196,51 +198,51 @@ dev.off()
 ## Old Code do not run
 #--------------------------------------------------------------
 
-cal <- readOGR(here("data/spatial", "caloutline.shp"))
-all_mpas <- readOGR(here("data/spatial", "state_mpas.shp"))
-
-d <- par(las = 1, mgp = c(3, 0.75, 0))
-plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE) # cal state
-plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
-plot(mp, pch = 21, cex = mp$predited.consumption*0.25, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .5))
-
-par(d)
-
-# Make a plot for each year...
-for(i in 2002:2018){
-  myfile <- file.path("figures/maps", paste("year", "_", i, ".png"))
-  png(myfile, width = 1000*3, height = 561*3, res = 300)
-  d <- par(las = 1, mgp = c(3, 0.75, 0), mar = c(4,5,3,1))
-  plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE) # cal state
-  plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
-  plot(mp[mp$year == i,], pch = 21, cex = mp$predited.consumption[mp$year == i]*0.25, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .25))
-  par(d)
-  dev.off()
-}
-
-
-# Make a time averaged plot...
-
-av <- mp@data %>% 
-  mutate(group = cut(year, breaks = 4, labels = FALSE)) %>%
-  group_by(site, transect, group) %>%
-  summarize(predicted.consumption = mean(predited.consumption, na.rm = T)) %>%
-  left_join(sites)
-
-coordinates(av) <- ~long + lat
-
-proj4string(av) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
-
-#c(bottom, left, top, right)
-id <- c("2000-2004", "2005-2009", "2010-2013", "2014-2018")
-
-png(here("figures", "map.png"), width = 1000*1.2, 600*1.2)
-d <- par(mfrow = c(2, 2), las = 1, mgp = c(3, 0.75, 0), mar = c(3,5, 1.5, 0.5))
-for(i in 1:4){
-  plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE, main = paste(id[i])) # cal state
-  plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
-  plot(av[av$group == i, ], pch = 21, cex = av$predicted.consumption[av$group == i], add = T, lwd = 1.5,  bg = alpha("#e31a1c", .5))
-}
-par(d)
-dev.off()
+# cal <- readOGR(here("data/spatial", "caloutline.shp"))
+# all_mpas <- readOGR(here("data/spatial", "state_mpas.shp"))
+# 
+# d <- par(las = 1, mgp = c(3, 0.75, 0))
+# plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE) # cal state
+# plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
+# plot(mp, pch = 21, cex = mp$predited.consumption*0.25, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .5))
+# 
+# par(d)
+# 
+# # Make a plot for each year...
+# for(i in 2002:2018){
+#   myfile <- file.path("figures/maps", paste("year", "_", i, ".png"))
+#   png(myfile, width = 1000*3, height = 561*3, res = 300)
+#   d <- par(las = 1, mgp = c(3, 0.75, 0), mar = c(4,5,3,1))
+#   plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE) # cal state
+#   plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
+#   plot(mp[mp$year == i,], pch = 21, cex = mp$predited.consumption[mp$year == i]*0.25, add = T, lwd = 1.5,  bg = alpha("#e31a1c", .25))
+#   par(d)
+#   dev.off()
+# }
+# 
+# 
+# # Make a time averaged plot...
+# 
+# av <- mp@data %>% 
+#   mutate(group = cut(year, breaks = 4, labels = FALSE)) %>%
+#   group_by(site, transect, group) %>%
+#   summarize(predicted.consumption = mean(predited.consumption, na.rm = T)) %>%
+#   left_join(sites)
+# 
+# coordinates(av) <- ~long + lat
+# 
+# proj4string(av) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"
+# 
+# #c(bottom, left, top, right)
+# id <- c("2000-2004", "2005-2009", "2010-2013", "2014-2018")
+# 
+# png(here("figures", "map.png"), width = 1000*1.2, 600*1.2)
+# d <- par(mfrow = c(2, 2), las = 1, mgp = c(3, 0.75, 0), mar = c(3,5, 1.5, 0.5))
+# for(i in 1:4){
+#   plot(cal, col = "#FFEB9B", xlim = c(-120.5,-119.5), ylim = c(34.35,34.55), xlab = "", ylab = "", cex.axis = 1.5, axes = TRUE, main = paste(id[i])) # cal state
+#   plot(all_mpas, pch = 4, col = "#99ebff", add = T) 
+#   plot(av[av$group == i, ], pch = 21, cex = av$predicted.consumption[av$group == i], add = T, lwd = 1.5,  bg = alpha("#e31a1c", .5))
+# }
+# par(d)
+# dev.off()
 

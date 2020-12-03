@@ -60,7 +60,8 @@ lt <- lt %>%
   drop_na(MAPY) %>%
   mutate(detritus.production = av * MAPY, 
          dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
-         urc.biomass = SPL + SFL)
+         urc.biomass = SPL + SFL) %>%
+  filter(urc.biomass > 0)
 
 #-------------------------------------------------------
 ## Summary stats for paper
@@ -93,23 +94,25 @@ summary(lmer4.1)
 modelassump(lmer4.1)
 
 #The distribution of the response is relatively tricky. Zero-inflated to some extent... these are some models attempting to refine the fit.
-glm4.1.a <- glm(I(MAPY+1) ~ urc.biomass + dummy, data = lt, family = Gamma(link = "log"))
+
+lt$MAPY1 <- lt$MAPY+1
+glm4.1.a <- glm(MAPY1 ~ urc.biomass + dummy, data = lt, family = Gamma(link = "log"))
 summary(glm4.1.a)
 modelassump(glm4.1.a)
 
-lmer4.1.b <- glmer(I(MAPY+1) ~ scale(urc.biomass) + dummy + (1|site) + (1|year), data = lt, family = gaussian(link = "log"))
+lmer4.1.b <- glmer(MAPY1 ~ scale(urc.biomass) + dummy + (1|site) + (1|year), data = lt, family = gaussian(link = "log"))
 summary(lmer4.1.b)
 modelassump(lmer4.1.b)
 
-glmer4.1.c <- glmer(I(MAPY+1) ~ scale(urc.biomass) * dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+glmer4.1.c <- glmer(MAPY1 ~ scale(urc.biomass) * dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
 summary(glmer4.1.c)
 modelassump(glmer4.1.c)
 
-  glmer4.1.d <- glmer(I(MAPY+1) ~ scale(urc.biomass) + dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+  glmer4.1.d <- glmer(MAPY1 ~ scale(urc.biomass) + dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
   summary(glmer4.1.d)
   modelassump(glmer4.1.d)
   
-  glmer4.1.e <- glmer(I(MAPY+1) ~ scale(urc.biomass) + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+  glmer4.1.e <- glmer(MAPY1 ~ scale(urc.biomass) + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
   summary(glmer4.1.e)
   modelassump(glmer4.1.e)
   
@@ -127,14 +130,14 @@ anova(lmer4.1, lmer4.2)
 anova(glm4.1.a, glmer4.1.c)
 
 
-lt$MAPY1 <- lt$MAPY+0.01
+
 
 glmer4.1.c <- glmer(MAPY1 ~ scale(urc.biomass) * dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
 summary(glmer4.1.c)
 modelassump(glmer4.1.c)
 
 
-newdat <- ggpredict(glmer4.1.c, terms = c("urc.biomass", "dummy"))
+newdat <- ggeffects::ggpredict(glmer4.1.c, terms = c("urc.biomass", "dummy"))
 plot(newdat)
 
 
@@ -162,36 +165,17 @@ p2 <- ggplot(lt, aes(x = dummy, y = MAPY))+
   scale_color_manual(values = c("#8f4811", "#35753d"))+
   geom_boxplot(outlier.shape = NA, alpha = 0.75)+
   labs(x = "", y = "", color = "")+
+  scale_x_discrete(labels = c("Detritus <\n Consumption", "Detritus >=\n Consumption"))+
+  scale_y_continuous(breaks = seq(0, 25000, by = 5000))+
   theme_classic()+
-  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+  theme(axis.text.y = element_blank())+
+  coord_cartesian(ylim = c(0, 25000))
 
 fig5 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 0.5) )
 ggsave(here("figures", "kelpxurc.png"), fig5, device = "png", width = 10, height = 5)
 
 
 
-#-----------------------------------------------------
-## Supplemental figure 3
-#-----------------------------------------------------
-
-length(lt$site[lt$dummy == "Detritus < Consumption" & lt$urc >= 668])/
-  length(lt$site[lt$dummy == "Detritus < Consumption"])
-length(lt$site[lt$dummy == "Detritus >= Consumption"])
-
-lt$dummy2 <- ifelse(lt$dummy == "Detritus < Consumption" & lt$urc >= 668, "Urchin biomass >= 668", "Urchin biomass < 668")
-
-s3 <- lt %>%
-  filter(site %in% c("CARP", "NAPL", "IVEE")) %>%
-  ggplot(aes(x = year, y = MAPY))+
-  geom_line(aes(color = as.factor(transect)), show.legend = FALSE)+
-  geom_point(aes(fill = dummy, shape = dummy2), alpha = 0.75, show.legend = F)+
-  scale_shape_manual(values = c(21,24))+
-  scale_fill_manual(values = c("red", "gray"))+
-  labs(fill = "", y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), x = "")+ 
-  facet_wrap(~site, scales = "free_y")+
-  ggpubr::theme_pubclean()
-
-ggsave(here("figures", "kelpxyear_barrens.png"), s3, device = "png", width = 10, height = 3.33)
 
 #-----------------------------------------------------
 ## Summary statistics
@@ -224,8 +208,7 @@ lt2 <- lt %>%
   group_by(site, transect) %>%
   arrange(site,transect, year) %>%
   mutate(deltaK = MAPY - lag(MAPY, order_by = year)) %>% 
-  filter(urc.biomass != 0,
-         deltaK != 0 & MAPY != 0) %>%
+  filter(deltaK != 0 & MAPY != 0) %>%
   arrange(site,transect, year)
 
 lt2$dummy2 <- ifelse(lt2$urc.biomass >= 668, "Urchin biomass >= 668", "Urchin biomass < 668")
@@ -258,6 +241,103 @@ f5 <- lt2 %>%
 
 ggsave(here("figures", "perdiffXdeltaK.png"), f5, device = "png")
 
+
+
+#------------------------------------------------------
+## Time series plot
+#------------------------------------------------------
+
+
+# time series
+
+t1 <- lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(biomass = mean(MAPY, na.rm = T)) %>% #adding a biomass column
+  ggplot(aes(x = year, y = biomass))+
+  geom_line(aes(color = site), show.legend = F)+
+  scale_color_manual(values = c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6'))+
+  stat_summary(fun = mean, geom = "line", lwd = 2, alpha = 0.75)+
+  labs(y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), x = "")+
+  theme_classic()
+
+t2 <- lt %>%
+  group_by(year,site) %>%
+  summarize(predicted.consumption = mean(predicted.consumption, na.rm = T)) %>%
+  ggplot(aes(x = year, y = predicted.consumption))+ #average consumption across sites
+  geom_line(aes(color = site), show.legend = F)+
+  scale_color_manual(values = c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6'))+
+  stat_summary(fun = mean, geom = "line", lwd = 2, alpha = 0.75)+
+  labs(y = expression(paste("Predicted kelp consumption (g m"^"-2"*"d"^"-1"*")")), x = "")+
+  theme_classic()
+
+fig4 <- cowplot::plot_grid(t1, t2, align = "v", nrow = 2)
+
+ggsave(here("figures", "timeseries.png"), fig4, units = "in", width = 12, height = 6)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#-----------------------------------------------------------------------------------------
+## OLD code
+#-----------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+#-----------------------------------------------------
+## Supplemental figure 3
+#-----------------------------------------------------
+
+length(lt$site[lt$dummy == "Detritus < Consumption" & lt$urc >= 668])/
+  length(lt$site[lt$dummy == "Detritus < Consumption"])
+length(lt$site[lt$dummy == "Detritus >= Consumption"])
+
+lt$dummy2 <- ifelse(lt$dummy == "Detritus < Consumption" & lt$urc >= 668, "Urchin biomass >= 668", "Urchin biomass < 668")
+
+s3 <- lt %>%
+  filter(site %in% c("CARP", "NAPL", "IVEE")) %>%
+  ggplot(aes(x = year, y = MAPY))+
+  geom_line(aes(color = as.factor(transect)), show.legend = FALSE)+
+  geom_point(aes(fill = dummy, shape = dummy2), alpha = 0.75, show.legend = F)+
+  scale_shape_manual(values = c(21,24))+
+  scale_fill_manual(values = c("red", "gray"))+
+  labs(fill = "", y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), x = "")+ 
+  facet_wrap(~site, scales = "free_y")+
+  ggpubr::theme_pubclean()
+
+ggsave(here("figures", "kelpxyear_barrens.png"), s3, device = "png", width = 10, height = 3.33)
+
+
 #------------------------------------------------------
 ## Lag plots
 #------------------------------------------------------
@@ -270,8 +350,11 @@ ggplot(lt, aes(x = urc.biomass, y = lead(MAPY, n = 1)))+
   ggpubr::theme_pubclean()
 
 
+
+
+
 #----------------------------------------------------
-## Time series plots
+## Old Time series plots
 #----------------------------------------------------
 
 pd <- position_dodge(0.4)
@@ -310,6 +393,4 @@ ggsave(here::here("figures/p3c.png"), p3c, device = "png", width = 12, height = 
 
 cowplot::plot_grid(p3b,p3c, ncol = 1, align = "v")
 ggsave(here::here("figures/p3bc.png"), device = "png", width = 12, height = 6)
-
-
 
