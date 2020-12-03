@@ -149,21 +149,21 @@ plot(newdat)
 
 
 p1 <- ggplot(lt, aes(x = urc.biomass, y = MAPY))+
-  geom_jitter(aes(color = dummy), pch = 21)+
-  scale_color_manual(values = c("#8f4811", "#35753d"))+
+  geom_jitter(colour="white",aes(fill=dummy), pch = 21,alpha=0.5)+
+  scale_fill_manual(values = c("#8f4811", "#35753d"))+
   # geom_line(data = newdat, aes(x = predicted.consumption , y = y)) +
   labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), color = "")+
-  geom_line(data = newdat, aes(x = x, y = predicted, color = group))+
-  geom_ribbon(data = newdat, aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high, group = group), alpha = .1) +
+  # geom_line(data = newdat, aes(x = x, y = predicted, color = group))+
+  # geom_ribbon(data = newdat, aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high, group = group), alpha = .1) +
   theme_classic()+
   theme(legend.position = c(0.5,0.75), 
         legend.background = element_blank())+
   coord_cartesian(ylim = c(0, 25000))
 
 p2 <- ggplot(lt, aes(x = dummy, y = MAPY))+
-  geom_jitter(aes(color = dummy), pch = 21, show.legend = F)+
-  scale_color_manual(values = c("#8f4811", "#35753d"))+
-  geom_boxplot(outlier.shape = NA, alpha = 0.75)+
+  geom_jitter(colour="white",aes(fill=dummy), pch = 21,alpha=0.5)+
+  scale_fill_manual(values = c("#8f4811", "#35753d"))+
+  geom_boxplot(outlier.shape = NA, alpha = 0.75,aes(fill=dummy))+
   labs(x = "", y = "", color = "")+
   scale_x_discrete(labels = c("Detritus <\n Consumption", "Detritus >=\n Consumption"))+
   scale_y_continuous(breaks = seq(0, 25000, by = 5000))+
@@ -171,8 +171,11 @@ p2 <- ggplot(lt, aes(x = dummy, y = MAPY))+
   theme(axis.text.y = element_blank())+
   coord_cartesian(ylim = c(0, 25000))
 
-fig5 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 0.5) )
+fig5 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 1) )
+# fig5
+
 ggsave(here("figures", "kelpxurc.png"), fig5, device = "png", width = 10, height = 5)
+ggsave(here("figures", "kelpxurc.pdf"), fig5, device = "pdf", width = 8, height = 4)
 
 
 

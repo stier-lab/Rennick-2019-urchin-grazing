@@ -198,7 +198,7 @@ fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_point(aes(fill = sp), pch = 21, show.legend = F, size=3)+
   scale_fill_manual(values = c("#550f7a", "#E3493B"))+
   geom_line(data = pred, aes( x= biomass, y = herbivory_rate), size = 1)+
-  geom_ribbon(data = pred, aes( ymin = low, ymax = high), alpha = 0.3)+
+  geom_ribbon(data = pred, aes( ymin = low, ymax = high,fill=sp), alpha = 0.3)+
   facet_wrap(~sp)+
   theme_classic()+
   theme(strip.text = element_text(size = 10))+
@@ -214,7 +214,10 @@ fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
   theme(axis.text = element_text(size = 15))+
   theme(legend.text=element_text(size=15))
   
-ggsave("figures/herbivoryXdensity_fig2.png", fig2, device = "png")
+print(fig2)
+
+ggsave("figures/herbivoryXdensity_fig2.png", fig2, device = "png",width=7,height=3.5)
+ggsave("figures/herbivoryXdensity_fig2.pdf", fig2, device = "pdf")
 
 
 ########################
