@@ -6,8 +6,8 @@ pal <- wes_palette("Darjeeling1", 9, type = "continuous")
 
 
 df <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER dataset: urchin desnity data collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel. (what are strings?)
-  dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "WM_GM2") %>%
-  filter(SP_CODE == "SPL" | SP_CODE == "SFL" ) %>% #filtering for only purple urchins
+  filter(SP_CODE == "SPL" | SP_CODE == "SFL" ) %>%
+  dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "WM_GM2", "DENSITY") %>%
   filter(SITE != "SCTW", SITE != "SCDI") %>% #Removing two island sites. We are only working with coastal sites. 
   group_by(YEAR, MONTH, SITE, TRANSECT) %>%
   rename_all(tolower) %>%
@@ -17,6 +17,46 @@ df <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", st
 
 
 df$site<-as.factor(df$site)
+
+# for size data:
+
+sz <- read.csv("data/survey_data/Annual_Quad_Swath_All_Years_20200108.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER dataset: urchin desnity data collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel. (what are strings?)
+  filter(SP_CODE == "SPL" | SP_CODE == "SFL" ) %>%
+  filter(SITE != "SCTW", SITE != "SCDI") %>%
+  dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "QUAD", "SIDE", "SIZE", "SP_CODE") %>%
+  rename_all(tolower)
+
+# citation: Reed, D. 2020. SBC LTER: Reef: Kelp Forest Community Dynamics: Invertebrate and algal density ver 26. Environmental Data Initiative. https://doi.org/10.6073/pasta/cd4009368880fcc32d67ab0542e6b048. Accessed 2020-12-15.
+
+#------------------------------------------------------------------
+## Stats for text
+#------------------------------------------------------------------
+
+# red urchin vs purple urchin biomass
+
+(aov1 <- aov(biomass ~ sp_code, df))
+summary(aov1)
+
+TukeyHSD(aov1)
+
+# red urchin vs purple urchin density
+
+(aov2 <- aov(density ~ sp_code, df))
+summary(aov2)
+
+TukeyHSD(aov2)
+
+# red urchin vs. purple urchin size
+
+(aov3 <- aov(size ~ sp_code, sz))
+summary(aov3)
+TukeyHSD(aov3)
+
+
+#---------------------------------------------------------------------
+## Plotting
+#---------------------------------------------------------------------
+
 
 p1 <- ggplot(df, aes( x= sp_code, y= biomass))+
   geom_point(alpha = 0, show.legend = F)+
