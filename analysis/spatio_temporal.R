@@ -124,7 +124,7 @@ modelassump(lmer4.2)
 
 AIC(lmer4,lmer4.1, lmer4.2)
 AIC(glm4.1.a, lmer4.1.b, glmer4.1.c)
-AIC(glmer4.1.c, glmer4.1.d, glmer4.1.e)
+AIC(glmer4.1.c, glmer4.1.e)
 anova(lmer4,lmer4.1)
 anova(lmer4.1, lmer4.2)
 anova(glm4.1.a, glmer4.1.c)
@@ -220,7 +220,7 @@ lt2$dummy2 <- ifelse(lt2$urc.biomass >= 668, "Urchin biomass >= 668", "Urchin bi
 lmer6 <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2)
 summary(lmer6)
 
-newdat <- ggpredict(lmer6, terms = "per.diff", type = "fe")
+newdat <- ggeffects::ggpredict(lmer6, terms = "per.diff", type = "fe")
 
 f5 <- lt2 %>%
   ggplot(aes(x = per.diff, y = deltaK))+
