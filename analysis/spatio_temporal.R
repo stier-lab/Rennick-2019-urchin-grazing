@@ -6,7 +6,7 @@ library(here)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(lmer)
+library(lme4)
 library(lmerTest)
 source(here("analysis/", "Functions.R"))
 library(car) 
@@ -149,33 +149,37 @@ plot(newdat)
 
 
 p1 <- ggplot(lt, aes(x = urc.biomass, y = MAPY))+
-  geom_jitter(colour="white",aes(fill=dummy), pch = 21,alpha=0.5)+
-  scale_fill_manual(values = c("#8f4811", "#35753d"))+
+  geom_jitter(colour="white",aes(fill=dummy, shape = dummy), alpha = 0.5, size = 2)+
+  scale_shape_manual(values = c(24,21)) +
+  scale_fill_manual(values = c("#272593", "#35753d"))+
   # geom_line(data = newdat, aes(x = predicted.consumption , y = y)) +
   labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), color = "")+
   # geom_line(data = newdat, aes(x = x, y = predicted, color = group))+
   # geom_ribbon(data = newdat, aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high, group = group), alpha = .1) +
   theme_classic()+
-  theme(legend.position = c(0.5,0.75), 
-        legend.background = element_blank())+
+  theme(legend.position = c(0.75,0.9), 
+        legend.background = element_rect(fill = "white", color = "black"),
+        legend.title = element_blank())+
   coord_cartesian(ylim = c(0, 25000))
 
 p2 <- ggplot(lt, aes(x = dummy, y = MAPY))+
-  geom_jitter(colour="white",aes(fill=dummy), pch = 21,alpha=0.5)+
-  scale_fill_manual(values = c("#8f4811", "#35753d"))+
+  geom_jitter(colour="white",aes(fill=dummy, shape = dummy, alpha=0.5), size = 2)+
+  scale_shape_manual(values = c(24,21)) +
+  scale_fill_manual(values = c("#272593", "#35753d"))+
   geom_boxplot(outlier.shape = NA, alpha = 0.75,aes(fill=dummy))+
   labs(x = "", y = "", color = "")+
   scale_x_discrete(labels = c("Detritus <\n Consumption", "Detritus >=\n Consumption"))+
   scale_y_continuous(breaks = seq(0, 25000, by = 5000))+
   theme_classic()+
   theme(axis.text.y = element_blank())+
-  coord_cartesian(ylim = c(0, 25000))
+  coord_cartesian(ylim = c(0, 25000)) +
+  theme(legend.position = "none")
 
-fig5 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 1) )
+fig5 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 1), labels = "AUTO")
 # fig5
 
 ggsave(here("figures", "kelpxurc.png"), fig5, device = "png", width = 10, height = 5)
-ggsave(here("figures", "kelpxurc.pdf"), fig5, device = "pdf", width = 8, height = 4)
+ggsave(here("figures", "kelpxurc.pdf"), fig5, device = "pdf", width = 8, height = 4, useDingbats = FALSE)
 
 
 
@@ -225,10 +229,9 @@ newdat <- ggeffects::ggpredict(lmer6, terms = "per.diff", type = "fe")
 f5 <- lt2 %>%
   ggplot(aes(x = per.diff, y = deltaK))+
   #scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 11, name = "RdBu"))+
-  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 9, name = "Greens"), trans = "log10")+
   geom_point(aes(size = urc.biomass, fill = MAPY, color = dummy2), pch = 21)+
-  scale_color_manual(values = c("white", "black"))+
-  geom_line(data = newdat, aes(x = x, y = predicted))+
+  scale_color_manual(values = c("gray", "black"))+
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 9, name = "Greens"), trans = "log10")+geom_line(data = newdat, aes(x = x, y = predicted))+
   geom_ribbon(data = newdat, aes(x = x, ymin = conf.low, ymax = conf.high, y = predicted), alpha = .2) +
   # geom_line(data = newdat, aes(x = per.diff, y = LC), lty = 4)+
   # geom_line(data = newdat, aes(x = per.diff, y = UC), lty = 4)+
@@ -243,7 +246,7 @@ f5 <- lt2 %>%
   ggpubr::theme_pubr(legend = "right")
 
 ggsave(here("figures", "perdiffXdeltaK.png"), f5, device = "png")
-
+ggsave(here("figures", "perdiffXdeltaK.pdf"), f5, device = "pdf", useDingbats = FALSE)
 
 
 #------------------------------------------------------
@@ -275,7 +278,7 @@ t2 <- lt %>%
 
 fig4 <- cowplot::plot_grid(t1, t2, align = "v", nrow = 2)
 
-ggsave(here("figures", "timeseries.png"), fig4, units = "in", width = 12, height = 6)
+ggsave(here("figures", "timeseries.pdf"), fig4, units = "in", width = 12, height = 6, useDingbats = FALSE)
 
 
 

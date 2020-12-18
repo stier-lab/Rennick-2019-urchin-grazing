@@ -17,7 +17,7 @@ library(car)
 # ------------------------------------------------------------------------------------------------
 
 
-df <- read.csv("data/density_experiment/raw/urchin_density_data_raw_c.csv", stringsAsFactors = FALSE) %>% #cdata from density dependent urchin herbivory lab trials for red and purple urhcins.  5 densities tested for red urchins with three replicates of each. 8 densities tested for purple urchins with four replicates of each. 
+df <- read.csv("data/density_experiment/raw/urchin_density_data_raw_c.csv", stringsAsFactors = FALSE, fileEncoding="UTF-8-BOM") %>% #cdata from density dependent urchin herbivory lab trials for red and purple urhcins.  5 densities tested for red urchins with three replicates of each. 8 densities tested for purple urchins with four replicates of each. 
   as_tibble() %>% 
   select(kelp_in, kelp_out, urchin_density, tank, tank_size, date, trial_number, p_r, trial_id, total_time, urchin_size, urchin_mass, mortality) %>% 
   mutate(kelp_consumed=(kelp_in-kelp_out)) %>% 
@@ -29,6 +29,7 @@ df <- read.csv("data/density_experiment/raw/urchin_density_data_raw_c.csv", stri
   mutate(urchin_size = NULL, 
          urchin_mass  = NULL, 
          sp = ifelse(p_r == "p", "Purple urchin", "Red urchin"))
+
 
 ggplot(df, aes(x = biomass, y = herbivory_rate))+
   geom_point(pch = 21)+
@@ -206,7 +207,7 @@ fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
 print(fig2)
 
 ggsave("figures/herbivoryXdensity_fig2.png", fig2, device = "png",width=7,height=3.5)
-ggsave("figures/herbivoryXdensity_fig2.pdf", fig2, device = "pdf")
+ggsave("figures/herbivoryXdensity_fig2.pdf", fig2, device = "pdf", useDingbats = FALSE)
 
 
 ########################
