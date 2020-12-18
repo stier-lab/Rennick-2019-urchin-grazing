@@ -91,23 +91,17 @@ zoom_map <- ggplot()+
   geom_sf(data = sites, aes(size = pc_mean, color = site, alpha = 0.95), show.legend = F)+
   scale_size(range = c(2,22))+
   scale_color_manual(values = c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6'))+
-  labs(x = "", y = "", size = expression(paste("Interaction\nstrength (ind. m"^-2,"d"^-1,")")))+
+  labs(x = "", y = "", size = expression(paste("Predicted\nconsumption (g m"^-2,"d"^-1,")")))+
   coord_sf(xlim = c(-120.7, -119.25), ylim = c(33.8, 34.65), expand = F)+
   scale_x_continuous(breaks = -1*seq(119.5, 120.5, by = 0.5))+
   annotation_scale(location = "bl", style = "ticks",  pad_x = unit(0.25, "cm"), pad_y = unit(0.25, "cm"))+
   annotation_north_arrow(location = "tr", style = north_arrow_nautical, height = unit(0.75, "cm"), width = unit(0.75, "cm"), pad_x = unit(0.25, "cm"), pad_y = unit(0.25, "cm"))+
   guides(color = FALSE, fill = FALSE, size = guide_legend(override.aes = list(shape = 21, color = "black", alpha = 1)))+
-  theme(legend.title=element_text(size=14), legend.background = element_black())
+  theme(legend.title=element_text(size=14),legend.key=element_blank(),legend.background = element_blank())
 #guides(color = FALSE, fill = FALSE, size = guide_legend(direction = "horizontal", label.position = "top", label.vjust = 0, override.aes = list(shape = 21)))+
 #theme(legend.position = c(0.4, 0.9), panel.border = element_rect(colour = "black", fill=NA, size=1))
 
 
-
-theme(panel.border = element_blank(), panel.grid.major = element_blank(), 
-      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black", 
-                                                                   size = rel(1)), legend.key = element_blank(), 
-      strip.background = element_rect(fill = "white", colour = "black", 
-                                      size = rel(2)), complete = TRUE)
 
 
 ggsave(filename = here::here("figures/ggmap.png"),plot = zoom_map, device = "png", width = 12*0.85, height = 8*0.85)
@@ -134,4 +128,45 @@ map <- ggplot() +
 
 
 ggsave(filename = here::here("figures/ggmap_big.png"),plot = map, device = "png", width = 12*0.25, height = 8*0.85 )
+
+#------------------------------------
+## Adrian zoom
+#------------------------------------
+
+
+clipper_AS <- st_polygon(list(rbind(c(-121.506048, 35),
+                                       c(-106.374163, 35), 
+                                       c(-106.374163, 21.767804), 
+                                       c(-121.506048, 21.767804), 
+                                       c(-121.506048, 35)))) %>% st_sfc() %>% st_set_crs(4326)
+
+
+# world1 <- sf::st_as_sf(maps::map('world', region = c("USA", "Canada", "Mexico"), plot = FALSE, fill = TRUE)) %>% st_transform(4326)  %>% st_union() %>% st_intersection(clipper_AS)
+
+mex <- raster::getData("GADM", country = c("Mexico"), level = 1) %>% sf::st_as_sf() %>% sf::st_intersection(clipper_AS) %>% sf::st_transform(4326) 
+
+shore <- us %>% sf::st_as_sf() %>% sf::st_intersection(clipper_AS) %>% sf::st_transform(4326) %>% sf::st_union(mex) sf::st_union()
+
+bathy <- marmap::getNOAA.bathy(lon1 = -121.506048, lon2 = -106.374163,
+                        lat1 = 21.767804 , lat2 = 35, resolution = 1)
+
+depth.df <- marmap::fortify.bathy(bathy)
+breaks <- c(-4000, -3000, -2000, -1000, -500, -100)
+
+p.wide <- ggplot() + 
+  geom_tile(data = filter(depth.df, z < 0), aes(x = x, y = y, fill = z), show.legend = F)+
+  scale_fill_gradientn(colours = blues(10))+
+  geom_contour(data = filter(depth.df, z < 0), aes(x = x, y = y, z = z), color = "black", alpha = 0.25, breaks = breaks)+
+  geom_sf(data = shore, fill = "#596778", color = "#596778") + 
+  coord_sf(expand = F)+
+  geom_sf(data = clipper_small, color = "red", fill = NA, lwd = 1)+
+  labs(x = "", y = "")+
+  theme(axis.text = element_text(size = 12), panel.background = element_blank(), axis.line = element_line())
+
+ggsave(filename = here::here("figures/ggmap_wide.png"),plot = p.wide, device = "png", width = 12*0.85, height = 8*0.85)
+
+
+
+
+
 
