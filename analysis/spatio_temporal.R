@@ -281,13 +281,40 @@ fig4 <- cowplot::plot_grid(t1, t2, align = "v", nrow = 2)
 ggsave(here("figures", "timeseries.pdf"), fig4, units = "in", width = 12, height = 6, useDingbats = FALSE)
 
 
+#----------------------------------------------------
+## Faceted time series plots
+#----------------------------------------------------
 
 
+lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(kelp.biomass = mean(MAPY, na.rm = T), 
+            urc.biomass = mean(urc.biomass, na.rm = T)) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site)) %>%
+  ggplot(aes(x = year, y = biomass))+
+  geom_line(aes(color = site), show.legend = F)+
+  facet_grid(species ~ site , scales = "free")
 
 
+means <- lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(MAPY = mean(MAPY, na.rm = T), 
+            urc.biomass = mean(urc.biomass, na.rm = T)) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site))
+
+plot <- lt %>% #LTER data 
+  group_by(year, site, transect) %>%
+  select(year, site, transect, MAPY, urc.biomass) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site, transect)) %>%
+  ggplot(aes(x = year, y = biomass))+
+  geom_line(aes(group = transect), show.legend = F, alpha = 0.5)+
+  geom_line(data = means, aes( x = year, y = biomass, color = site), lwd = 1.5, alpha = 0.75, show.legend = F)+
+  facet_grid(species ~ site , scales = "free")+
+  theme_bw()+
+  theme(panel.grid = element_blank())
 
 
-
+ggsave(filename = here::here("figures/", "facet_by_site_species.pdf"), plot = plot, device = "pdf", width = 14, height = 6)
 
 
 
