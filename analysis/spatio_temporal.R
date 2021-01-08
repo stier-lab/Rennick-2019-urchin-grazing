@@ -327,6 +327,7 @@ plot2 <- lt %>% #LTER data
   mutate(biomass2 = as.numeric(scale2(biomass))) %>%
   ggplot(aes(x = year, y = biomass2))+
   geom_line(aes(color = species), lwd = 1)+
+  geom_point(aes(color = species), lwd = 1.2)+
   scale_color_manual(values = c("#006d2c", "#810f7c"))+
   facet_wrap(~ site)+
   labs(x = "", y = "Biomass\n(z-scored by species across years within sites)")+
@@ -337,7 +338,30 @@ plot2 <- lt %>% #LTER data
 ggsave(filename = here::here("figures/", "facet_by_site_zscored.pdf"), plot = plot2, device = "pdf")
 
 
-str(scale(lt$MAPY))
+forplot <- lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(kelp.biomass = mean(MAPY, na.rm = T),
+            urc.biomass = mean(urc.biomass, na.rm = T)) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site)) %>%
+  group_by(site, species) %>%
+  mutate(biomass2 = as.numeric(scale2(biomass)))
+
+sites <- unique(forplot$site)
+
+for(i in 1:length(sites)){
+  forplot %>% filter(site == sites[i]) %>%
+  ggplot(aes(x = year, y = biomass2))+
+    geom_line(aes(color = species), lwd = 3, show.legend = F)+
+    geom_point(aes(color = species), size = 4, show.legend = F, pch = 21, fill = "white")+
+    scale_color_manual(values = c("#006d2c", "#810f7c"))+
+    labs(x = "", y = "Biomass")+
+    scale_x_continuous(breaks = c(2005, 2010, 2015))+
+    scale_y_continuous(breaks = c(-2, -1, 0, 1, 2, 3))+
+    coord_cartesian(ylim = c(-2, 3))+
+    theme_bw()+
+    theme(panel.grid = element_blank(), text = element_text(size = 30))+
+  ggsave(filename = here::here("figures/", paste("facet_by_site_zscored", sites[i], ".pdf", sep = "")), device = "pdf")
+}
 
 
 
