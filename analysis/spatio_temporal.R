@@ -316,14 +316,28 @@ plot <- lt %>% #LTER data
 
 ggsave(filename = here::here("figures/", "facet_by_site_species.pdf"), plot = plot, device = "pdf", width = 14, height = 6)
 
+scale2 <- function(x, na.rm = FALSE) (x - mean(x, na.rm = na.rm)) / sd(x, na.rm)
+
+plot2 <- lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(kelp.biomass = mean(MAPY, na.rm = T),
+            urc.biomass = mean(urc.biomass, na.rm = T)) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site)) %>%
+  group_by(site, species) %>%
+  mutate(biomass2 = as.numeric(scale2(biomass))) %>%
+  ggplot(aes(x = year, y = biomass2))+
+  geom_line(aes(color = species), lwd = 1)+
+  scale_color_manual(values = c("#006d2c", "#810f7c"))+
+  facet_wrap(~ site)+
+  labs(x = "", y = "Biomass\n(z-scored by species across years within sites)")+
+  theme_bw()+
+  theme(panel.grid = element_blank())
 
 
+ggsave(filename = here::here("figures/", "facet_by_site_zscored.pdf"), plot = plot2, device = "pdf")
 
 
-
-
-
-
+str(scale(lt$MAPY))
 
 
 
