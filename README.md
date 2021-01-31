@@ -21,7 +21,8 @@ spatio_temporal_maps.R | This script maps predicted herbivory pressure across ni
 # LTER Data ?
 */data/LTER*
 
-Data files exceed 100 MB, but can be downloaded from the Santa Barbara Coastal Long Term Ecological Research webpage at: https://sbclter.msi.ucsb.edu
+Data files exceed 100 MB, but can be downloaded from the Santa Barbara Coastal Long Term Ecological Research webpage at: https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-sbc&identifier=119
+
 
 
  
