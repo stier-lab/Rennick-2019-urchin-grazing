@@ -5,7 +5,7 @@ library(wesanderson)
 pal <- wes_palette("Darjeeling1", 9, type = "continuous")
 
 
-df <- read.csv("data/survey_data/LTE_All_Species_Biomass_at_transect_20200605.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER dataset: urchin desnity data collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel. (what are strings?)
+df <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER dataset: urchin desnity data collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel. (what are strings?)
   filter(SP_CODE == "SPL" | SP_CODE == "SFL" ) %>%
   dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "WM_GM2", "DENSITY") %>%
   filter(SITE != "SCTW", SITE != "SCDI") %>% #Removing two island sites. We are only working with coastal sites. 
@@ -125,4 +125,4 @@ ggsave("figures/biomasshisto.png", fig1, device = "png", width = 8.5, height = 5
 ggsave("figures/biomasshisto.pdf", fig1, device = "pdf", width = 7, height = 3)
 
 
-  
+

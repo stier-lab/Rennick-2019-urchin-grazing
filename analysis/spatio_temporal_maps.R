@@ -26,7 +26,7 @@ red.fun <- function(biomass){
   betar*biomass} # this is the herbivory rate model prediction formed from the density analysis for red urchins
 
 
-lt <- read.csv("data/survey_data/LTE_All_Species_Biomass_at_transect_20200605.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER data density estimations collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel.
+lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect_20210108.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER data density estimations collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel.
   dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "WM_GM2") %>%
   filter(SP_CODE %in% c("MAPY", "SFL", "SPL"))%>% #filtering the data to only include giant kelp, purple urchins, and red urchins
   filter(SITE != "SCTW", SITE != "SCDI") %>% 
