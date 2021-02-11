@@ -122,7 +122,7 @@ p2_alt
 
 fig1 <- cowplot::plot_grid(p1,p2_alt, align = "h")
 ggsave("figures/biomasshisto.png", fig1, device = "png", width = 8.5, height = 5)
-ggsave("figures/biomasshisto.pdf", fig1, device = "pdf", width = 7, height = 3)
+ggsave("figures/biomasshisto.pdf", fig1, device = "pdf", width = 7, height = 3, useDingbats = FALSE)
 
 
 

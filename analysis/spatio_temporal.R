@@ -355,12 +355,12 @@ for(i in 1:length(sites)){
     geom_point(aes(color = species), size = 4, show.legend = F, pch = 21, fill = "white")+
     scale_color_manual(values = c("#006d2c", "#810f7c"))+
     labs(x = "", y = "Biomass")+
-    scale_x_continuous(breaks = c(2005, 2010, 2015))+
+    scale_x_continuous(breaks = c(2000, 2005, 2010, 2015, 2020))+
     scale_y_continuous(breaks = c(-2, -1, 0, 1, 2, 3))+
     coord_cartesian(ylim = c(-2, 3))+
     theme_bw()+
     theme(panel.grid = element_blank(), text = element_text(size = 30))+
-  ggsave(filename = here::here("figures/", paste("facet_by_site_zscored", sites[i], ".pdf", sep = "")), device = "pdf")
+  ggsave(filename = here::here("figures/", paste("facet_by_site_zscored", sites[i], ".pdf", sep = "")), device = "pdf", useDingbats = FALSE)
 }
 
 
