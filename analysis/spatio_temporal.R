@@ -245,8 +245,8 @@ f5 <- lt2 %>%
   annotate(x = c(-0.5, -0.5, 0.5, 0.5), y = c(15000, -15000, 15000, -15000), geom = "text", label = c("Kelp increases\nConsumption < detrital supply", "Kelp decreases\nConsumption < detrital supply", "Kelp increases\nConsumption > detrital supply", "Kelp decreases\nConsumption > detrial supply"))+
   ggpubr::theme_pubr(legend = "right")
 
-ggsave(here("figures", "perdiffXdeltaK.png"), f5, device = "png")
-ggsave(here("figures", "perdiffXdeltaK.pdf"), f5, device = "pdf", useDingbats = FALSE)
+ggsave(here("figures", "perdiffXdeltaK.png"), f5, device = "png", width = 10.63, height = 7.53)
+ggsave(here("figures", "perdiffXdeltaK.pdf"), f5, device = "pdf", useDingbats = FALSE, width = 10.63, height = 7.53)
 
 
 #------------------------------------------------------
