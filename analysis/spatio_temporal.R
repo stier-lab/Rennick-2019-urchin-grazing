@@ -63,6 +63,9 @@ lt <- lt %>%
          urc.biomass = SPL + SFL) %>%
   filter(urc.biomass > 0)
 
+ggplot(lt[lt$year > 2018, ], aes(x = site, y = MAPY))+
+  geom_point(aes(color = site))
+
 #-------------------------------------------------------
 ## Summary stats for paper
 #-------------------------------------------------------
@@ -85,11 +88,11 @@ sum <- lt %>% group_by(dummy) %>% summarize(mean = mean(predicted.consumption), 
 
 # UPDATED 10/1/2020 BD: OK so our hypothesis is that urchin and living kelp biomass are decoupled under conditions when detrital supply is high. Therefore, we predict that the balance of consumption rate and detrial supply will explain kelp biomass dynamics better than urchin biomass alone. To test this we will build a model of kelp biomass ~ urchin biomass and compare that to a model of kelp biomass ~ urchin biomass +/* dummy factor
 
-lmer4 <- lmer(MAPY ~ urc.biomass * dummy + (1|site) + (1|year), data = lt)
+lmer4 <- lmer(sqrt(MAPY) ~ urc.biomass * dummy + (1|site) + (1|year), data = lt)
 summary(lmer4)
 modelassump(lmer4)
 
-lmer4.1 <- lmer(MAPY ~ urc.biomass + dummy + (1|site) + (1|year), data = lt)
+lmer4.1 <- lmer(sqrt(MAPY) ~ urc.biomass + dummy + (1|site) + (1|year), data = lt)
 summary(lmer4.1)
 modelassump(lmer4.1)
 
@@ -104,27 +107,49 @@ lmer4.1.b <- glmer(MAPY1 ~ scale(urc.biomass) + dummy + (1|site) + (1|year), dat
 summary(lmer4.1.b)
 modelassump(lmer4.1.b)
 
-glmer4.1.c <- glmer(MAPY1 ~ scale(urc.biomass) * dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+glmer4.1.c <- glmer(MAPY1 ~ scale(urc.biomass) * dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt[lt$year < 2019, ])
 summary(glmer4.1.c)
 modelassump(glmer4.1.c)
 
-  glmer4.1.d <- glmer(MAPY1 ~ scale(urc.biomass) + dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
-  summary(glmer4.1.d)
-  modelassump(glmer4.1.d)
-  
-  glmer4.1.e <- glmer(MAPY1 ~ scale(urc.biomass) + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
-  summary(glmer4.1.e)
-  modelassump(glmer4.1.e)
-  
 
+glmerTMB4 <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass) * dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+summary(glmerTMB4)
 
-lmer4.2 <- lmer(MAPY ~ urc.biomass + (1|site) + (1|year), data = lt)
+temp <- DHARMa::simulateResiduals(glmerTMB4)
+plot(temp)
+DHARMa::testZeroInflation(temp)
+DHARMa::testDispersion(temp)
+DHARMa::testTemporalAutocorrelation(simulationOutput = temp, time = lt$year)
+modelassump(glmerTMB4)
+
+  glmerTMB4.sqrt <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass) * dummy + (1|site) , family = Gamma(link = "sqrt"), data = lt)
+  summary(glmerTMB4.sqrt)
+
+anova(glmerTMB4, glmerTMB4.sqrt)
+
+  glmerTMB4.1.d <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass) + dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+  summary(glmerTMB4.1.d)
+  modelassump(glmerTMB4.1.d)
+  
+  glmerTMB4.1.e <- glmmTMB::glmmTMB(MAPY1 ~ urc.biomass + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+  summary(glmerTMB4.1.e)
+  modelassump(glmerTMB4.1.e)
+  
+AIC(glmerTMB4, glmerTMB4.1.d, glmerTMB4.1.e)
+anova(glmerTMB4, glmerTMB4.1.d)
+
+  
+  
+  
+  
+  
+lmer4.2 <- lmer(sqrt(MAPY) ~ urc.biomass + (1|site) + (1|year), data = lt)
 summary(lmer4.2)
 modelassump(lmer4.2)
 
 AIC(lmer4,lmer4.1, lmer4.2)
 AIC(glm4.1.a, lmer4.1.b, glmer4.1.c)
-AIC(glmer4.1.c, glmer4.1.e)
+AIC(glmer4.1.c, glmer4.1.d, glmer4.1.e)
 anova(lmer4,lmer4.1)
 anova(lmer4.1, lmer4.2)
 anova(glm4.1.a, glmer4.1.c)
@@ -137,7 +162,7 @@ summary(glmer4.1.c)
 modelassump(glmer4.1.c)
 
 
-newdat <- ggeffects::ggpredict(glmer4.1.c, terms = c("urc.biomass", "dummy"))
+newdat <- ggeffects::ggpredict(glmerTMB4, terms = c("urc.biomass", "dummy"))
 plot(newdat)
 
 
