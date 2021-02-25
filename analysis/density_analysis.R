@@ -151,9 +151,12 @@ pred3$exp1.r <- predict(exp1.r, newdata = pred3) #exponential model predictions
 sig.r <- nls(herbivory_rate ~ (a * biomass^2) / (b^2 + biomass^2), data = rf, start = list(a = 10, b = 1000)) # this is an alternative parameterization based on Bolker et al. 2008, bestiary of functions p. 22. "a" is similar to handling time, and b is similar to attack rate in this parameterization.
 summary(sig.r)
 
+pow2.r <- nls(herbivory_rate ~ (a * biomass^b), data = rf, start = list(a = 10, b = 1)) 
+summary(pow2.r)
+
 pred3$sig.r <- predict(sig.r, newdata = pred3)
 
-AIC(lm1.r, exp1.r, sig.r)
+AIC(lm1.r, pow2.r, sig.r)
 # So it seems that there is no evidence for any differences between linear and sigmoidal curves. 
 
 model_compare3 <- ggplot(rf, aes(x = biomass, y = herbivory_rate))+
@@ -272,11 +275,29 @@ hl <- ggplot(pf, aes(x = biomass, y = herbivory_rate))+
 ggsave(here("figures", "hunter-talk.png"), hl, device = "png", width = 5, height = 3.8)
 
 
+#----------------------------------------
+# deltaAIC table
+#----------------------------------------
 
+pl <- c(
+  `(Intercept)` = "Intercept"
+)
 
+sjPlot::tab_model(lm1, pow2, sig, 
+                  show.aic = T, 
+                  show.icc = F, 
+                  show.loglik = T, 
+                  show.ngroups = F, 
+                  pred.labels = pl, 
+                  dv.labels = c("Linear", "Power-law", "Sigmoid"), file = here::here("figures/", "AICtablePurple.html"))
 
-
-
+sjPlot::tab_model(lm1.r, pow2.r, sig.r, 
+                  show.aic = T, 
+                  show.icc = F, 
+                  show.loglik = T, 
+                  show.ngroups = F, 
+                  pred.labels = pl, 
+                  dv.labels = c("Linear", "Power-law", "Sigmoid"), file = here::here("figures/", "AICtableRed.html"))
 
 
 

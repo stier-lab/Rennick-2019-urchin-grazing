@@ -37,6 +37,9 @@ sz <- read.csv("data/survey_data/Annual_Quad_Swath_All_Years_20200108.csv", stri
 (aov1 <- aov(biomass ~ sp_code, df))
 summary(aov1)
 
+temp <- df %>% group_by(sp_code) %>% summarize(mean = round(mean(biomass),2), 
+                                       se = sd(biomass)/n())
+
 TukeyHSD(aov1)
 
 # red urchin vs purple urchin density
@@ -45,6 +48,9 @@ TukeyHSD(aov1)
 summary(aov2)
 
 TukeyHSD(aov2)
+
+df %>% group_by(sp_code) %>% summarize(mean = mean(density), 
+                                       se = sd(density)/n())
 
 # red urchin vs. purple urchin size
 
