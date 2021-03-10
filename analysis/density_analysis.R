@@ -251,16 +251,27 @@ df$con_per_g_biomass <- df$herbivory_rate / df$biomass
 S1 <- ggplot(df, aes(x = biomass, y = con_per_g_biomass))+
   geom_jitter(aes(fill = sp), pch = 21, show.legend = F)+
   scale_fill_manual(values = c("#762a83", "#d73027"))+
-  #geom_line(data = gg, aes(x = biomass, y = prediction))+
-  #scale_color_manual(c("#0B61A4", "#FF9200"))+
-  facet_wrap(~sp)+
+  facet_wrap(~sp, scales = "free")+
+  scale_x_continuous(limits = c(0, 2000))+
+  scale_y_continuous(limits = c(-0.02, 0.06))+
+  geom_hline(yintercept = 0, lty = "dashed", color = "gray")+
   labs(x = expression(paste("Urchin biomass density (g m"^"-2"*")")), 
        y = expression(paste("Herbivory rate (g"["kelp"]*"g"["urc"]^"-1"*"m"^"-2"*"d"^"-1"*")")), 
        color = "", linetype = "")+
-  ggpubr::theme_pubclean()+
-  theme(strip.background = element_blank()) 
+  theme_classic()+
+  theme(strip.text = element_text(size = 10))+
+  theme(strip.background = element_blank())+
+  theme(legend.position = c(.90,.90))+
+  theme(legend.title=element_blank())+
+  theme(axis.title.x= element_text(color= "black", size=20),
+        axis.title.y= element_text(color= "black", size=20))+
+  theme(legend.text=element_text(size=10))+
+  theme(legend.background = element_rect( 
+    size=0.5, linetype ="solid"))+
+  theme(axis.text = element_text(size = 15))+
+  theme(legend.text=element_text(size=15))
 
-ggsave(here("figures", "percapconsumption x biomass.png"), S1, device = "png", width = 6.5, height = 4)
+ggsave(here("figures", "percapconsumptionxbiomass.png"), S1, device = "png", width = 8.5, height = 5)
 
 #----------------------------------------
 # Figure for hunter lenihan talk
@@ -302,8 +313,28 @@ sjPlot::tab_model(lm1.r, pow2.r, sig.r,
 
 
 
+#-----------------------------------------------------------------------------------------
+## Barrier test
+#-----------------------------------------------------------------------------------------
 
+bd <- df %>% separate(tank, into = c("tank", "side"), sep = "[-]")
 
+aov <- aov(herbivory_rate ~ side, bd)
+summary(aov)
+
+TukeyHSD(aov)
+
+out <- list()
+tanks <- unique(bd$tank)
+tanks <- tanks[tanks != 9]
+for(i in 1:length(unique(bd$tank))){
+  out[[i]] <- summary(aov(herbivory_rate ~ side, bd[bd$tank == tanks[i], ]))
+}
+
+table(bd$tank, bd$side)
+
+ggplot(bd, aes(x = tank, group = side, y = herbivory_rate))+
+  geom_bar(aes(fill = side), stat = "identity", position = "dodge")
 
 # #-----------------------------------------------------------------------------------------
 # ## Breakpoint analysis

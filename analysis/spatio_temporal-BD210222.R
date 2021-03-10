@@ -113,8 +113,6 @@ lmer4.1 <- lmer(MAPY ~ urc.biomass + dummy + (1|site) + (1|year), data = lt)
 summary(lmer4.1)
 modelassump(lmer4.1)
 
-#The distribution of the response is relatively tricky. It does not appear to be zero inflated, about 90 zeros out of ~600, which would be expected. But you can't model with a poisson because biomass data follows a continuous positive distribution. A Gamma distribution is useful for positive continous data, but does not accept data with zeros. There is a board literature that describes the use of hurdle or zero-inflated models, where the presense or absence of the response (i.e. kelp) is described by a binomical model, and then how much kelp there is when it is present is modeled as a separate process. I think these models are a little overkill for our contexts, so I'm going to add 1 to the Kelp data to eliminate the zeros. Statistically this isn't perfect, but I think that it will suffice for our purposes.
-
 lt$MAPY1 <- lt$MAPY+1
 glm4.1.a <- glm(MAPY1 ~ urc.biomass + dummy, data = lt, family = Gamma(link = "log"))
 summary(glm4.1.a)
@@ -167,8 +165,9 @@ sjPlot::tab_model(glmerTMB4, glmerTMB4.1.d, glmerTMB4.1.f, glmerTMB4.1.e,
                   pred.labels = pl, 
                   dv.labels = c("", "", "", ""), file = here::here("figures/", "fig4modeltable.html"))
 
-AICcmodavg::aictab(cand.set = cand.models)
+
 cand.models <- list(glmerTMB4, glmerTMB4.1.d, glmerTMB4.1.e, glmerTMB4.1.f)
+AICcmodavg::aictab(cand.set = cand.models)
 
 newdat <- ggeffects::ggpredict(glmerTMB4, terms = c("urc.biomass", "dummy"))
 plot(newdat)
@@ -176,7 +175,7 @@ plot(newdat)
 
 
 #---------------------------------------------
-## Figure 5
+## Figure 4
 #---------------------------------------------
 
 # 2 panel plot with (a) the relationship between kelp biomass and urchin biomass with points colored by if consumption > detritus, and fit with the model between kelp biomass and urchin biomass. Panel b is the boxplot showing that kelp biomass is less when detritus < consumption. 
@@ -186,10 +185,11 @@ p1 <- ggplot(lt, aes(x = urc.biomass, y = MAPY))+
   geom_jitter(colour="white",aes(fill=dummy, shape = dummy), alpha = 0.5, size = 2)+
   scale_shape_manual(values = c(24,21)) +
   scale_fill_manual(values = c("#272593", "#35753d"))+
-  # geom_line(data = newdat, aes(x = predicted.consumption , y = y)) +
   labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), color = "")+
-  # geom_line(data = newdat, aes(x = x, y = predicted, color = group))+
-  # geom_ribbon(data = newdat, aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high, group = group), alpha = .1) +
+  geom_line(data = newdat, aes(x = x, y = predicted, color = group, linetype = group), show.legend = F, lwd = 1)+
+  geom_ribbon(data = newdat, aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high, group = group), alpha = .1) +
+  scale_color_manual(values = c("#272593", "#35753d"))+
+  scale_linetype_manual(values = c(1,4))+
   theme_classic()+
   theme(legend.position = c(0.75,0.9), 
         legend.background = element_rect(fill = "white", color = "black"),
@@ -209,11 +209,11 @@ p2 <- ggplot(lt, aes(x = dummy, y = MAPY))+
   coord_cartesian(ylim = c(0, 25000)) +
   theme(legend.position = "none")
 
-fig5 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 1), labels = "AUTO")
+fig4 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 1), labels = "AUTO")
 # fig5
 
-ggsave(here("figures", "kelpxurc.png"), fig5, device = "png", width = 10, height = 5)
-ggsave(here("figures", "kelpxurc.pdf"), fig5, device = "pdf", width = 8, height = 4, useDingbats = FALSE)
+ggsave(here("figures", "kelpxurc.png"), fig4, device = "png", width = 10, height = 5)
+ggsave(here("figures", "kelpxurc.pdf"), fig4, device = "pdf", width = 8, height = 4, useDingbats = FALSE)
 
 
 
