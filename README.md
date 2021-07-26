@@ -18,10 +18,20 @@ spatio-temporal.R | This script generates figure 3 (pannels b and c) 4 and 5. Fi
 spatio_temporal_maps.R | This script maps predicted herbivory pressure across nine coastal sites in the Santa Barbara Channel. It visually represents strength of predicted herbivory pressure determined by the size and density analysis of red and purple urchins paired with the observational size and density data from the LTER, across time and space to generate supplementary figure A1.
 
 
-# LTER Data ?
+# LTER Data 2020
 */data/LTER*
 
-Data files exceed 100 MB, but can be downloaded from the Santa Barbara Coastal Long Term Ecological Research webpage at: https://portal.edirepository.org/nis/mapbrowse?scope=knb-lter-sbc&identifier=119
+Santa Barbara Coastal LTER and D. Reed. 2020. SBC LTER: Reef: Long-term experiment: biomass of kelp forest species, ongoing since 2008 ver 6. Environmental Data Initiative. 
+
+Data files exceed 100 MB, but can be downloaded from the Santa Barbara Coastal Long Term Ecological Research webpage at: https://doi.org/10.6073/pasta/47db4ee01f516b0a47b7c585fd552645 
+
+# LTER Data 2021
+*/data/LTER*
+
+Santa Barbara Coastal LTER, D. Reed, and R. Miller. 2021. SBC LTER: Reef: Annual time series of biomass for kelp forest species, ongoing since 2000 ver 10. Environmental Data Initiative.
+
+Data files exceed 100 MB, but can be downloaded from the Santa Barbara Coastal Long Term Ecological Research webpage at:https://doi.org/10.6073/pasta/f1cf070648d7654ada052835afb2cfe9 (Accessed 2021-03-16).
+
 
 
 
