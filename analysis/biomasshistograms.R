@@ -66,8 +66,8 @@ TukeyHSD(aov3)
 
 p1 <- ggplot(df, aes( x= sp_code, y= biomass))+
   geom_point(alpha = 0, show.legend = F)+
-  geom_rect(aes(ymin= 668 - 115, ymax=668 + 115, xmin=0, xmax=Inf), fill = "gray90", alpha = 1/60)+ # 688gm^-2 is the transition denisty cited in Ling et. al 2016 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
-  geom_hline(yintercept = 668, linetype = 4)+ 
+  #geom_rect(aes(ymin= 668 - 115, ymax=668 + 115, xmin=0, xmax=Inf), fill = "gray90", alpha = 1/60)+ # 688gm^-2 is the transition denisty cited in Ling et. al 2016 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
+  # geom_hline(yintercept = 668, linetype = 4)+ 
   geom_boxplot(aes(fill = sp_code), alpha = 0.5, show.legend = F, outlier.shape = NA)+
   geom_jitter(aes(color = sp_code,alpha=0.5), width = 0.3, show.legend = F)+
   scale_color_manual(values = c("#550f7a", "#E3493B"))+
@@ -76,14 +76,13 @@ p1 <- ggplot(df, aes( x= sp_code, y= biomass))+
   labs(y = expression(paste("Urchin biomass (g m"^"-2"*")")), x = "")+
   coord_cartesian(ylim = c(0.8, 3000))+
   theme_classic()+
-  theme(axis.text=element_text(size=12))+
   theme(legend.title=element_blank())+
   theme(legend.position = c(0.2,0.85))+
   theme(axis.title.x= element_text(color= "black", size=16),
         axis.title.y= element_text(color= "black", size=16))+
   theme(legend.text=element_text(size=10))+
   expand_limits(y = 0.006)+
-  theme(axis.text = element_text(size = 12))
+  theme(axis.text = element_text(size = 10))
 
 
 p2 <- ggplot(df, aes(x = biomass))+
@@ -113,22 +112,24 @@ p2_alt <- df %>% #LTER data
   scale_colour_manual(values=pal)+
   # scale_color_manual(values = c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6'))+
   stat_summary(fun = mean, geom = "line", lwd = 2, alpha = 0.75)+
-  labs(y = "", x = "")+
+  labs(y = expression(paste("Combined biomass (g m"^"-2"*")")), x = "")+
   theme_classic()+
-  theme(axis.text=element_text(size=12))+
   theme(legend.title=element_blank())+
   theme(legend.position = c(0.2,0.85))+
   theme(axis.title.x= element_text(color= "black", size=16),
         axis.title.y= element_text(color= "black", size=16))+
   theme(legend.text=element_text(size=10))+
-  expand_limits(y = 0.006)
+  expand_limits(y = 0.006)+
+  theme(axis.text=element_text(size=10))
 
 
 p2_alt
 
-fig1 <- cowplot::plot_grid(p1,p2_alt, align = "h")
+fig1 <- cowplot::plot_grid(p1,p2_alt, align = "h", labels = "auto")
 ggsave("figures/biomasshisto.png", fig1, device = "png", width = 8.5, height = 5)
 ggsave("figures/biomasshisto.pdf", fig1, device = "pdf", width = 7, height = 3, useDingbats = FALSE)
 
-
+tiff(filename="figures/Fig1.tif",height=5600/2,width=5200,units="px",res=800,compression="lzw")
+fig1
+dev.off()
 

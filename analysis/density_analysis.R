@@ -186,31 +186,37 @@ pred <- bind_rows(pred, pred.r)
 
 
 fig2 <- ggplot(df, aes(x = biomass, y = herbivory_rate))+
-  geom_rect(aes(xmin= 668 - 115, xmax=668 + 115, ymin=-Inf, ymax=Inf), fill = "gray90", alpha = 0.1)+ # 688gm^-2 is the transition denisty cited in Ling et. al 2015 as the biomass of urchins required to incite a forward transition from a kelp dominated to an urhcin domianted state, with an error range of plus or minus 115gm^-2.
-  geom_vline(xintercept = 668, linetype = 4)+
-  geom_point(aes(fill = sp), pch = 21, show.legend = F, size=3)+
+  geom_rect(aes(xmin= 668, xmax=1246, ymin=-Inf, ymax=Inf), fill = "gray90", alpha = 0.1)+
+  #geom_vline(xintercept = 668, linetype = 4)+
+  geom_point(aes(fill = sp), pch = 21, size=3)+
   scale_fill_manual(values = c("#550f7a", "#E3493B"))+
-  geom_line(data = pred, aes( x= biomass, y = herbivory_rate), size = 1)+
-  geom_ribbon(data = pred, aes( ymin = low, ymax = high,fill=sp), alpha = 0.3)+
+  geom_line(data = pred, aes( x= biomass, y = herbivory_rate), size = 1, show.legend = F)+
+  geom_ribbon(data = pred, aes( ymin = low, ymax = high,fill=sp), alpha = 0.3, show.legend = F)+
   facet_wrap(~sp)+
   theme_classic()+
   theme(strip.text = element_text(size = 10))+
-  labs(x = expression(paste("Urchin biomass density (g m"^"-2"*")")), y = expression(paste("Herbivory rate (g m"^"-2"*"d"^"-1"*")")), color = "", linetype = "")+
+  labs(x = expression(paste("Urchin biomass (g m"^"-2"*")")), y = expression(paste("Herbivory rate (g m"^"-2"*"d"^"-1"*")")), color = "", linetype = "")+
   theme(strip.background = element_blank())+
-  theme(legend.position = c(.90,.90))+
+  theme(legend.position = c(.85,.90))+
   theme(legend.title=element_blank())+
-  theme(axis.title.x= element_text(color= "black", size=20),
-        axis.title.y= element_text(color= "black", size=20))+
-  theme(legend.text=element_text(size=10))+
-  theme(legend.background = element_rect( 
-    size=0.5, linetype ="solid"))+
-  theme(axis.text = element_text(size = 15))+
-  theme(legend.text=element_text(size=15))
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank()
+  )+
+  theme(axis.title.x= element_text(color= "black", size=14),
+        axis.title.y= element_text(color= "black", size=14))+
+  theme(legend.background = element_blank(), legend.box.background = element_blank()  )+
+  theme(axis.text = element_text(size = 12))+
+  theme(legend.text=element_text(size=12))
   
-print(fig2)
+fig2
 
 ggsave("figures/herbivoryXdensity_fig2.png", fig2, device = "png",width=7,height=3.5)
 ggsave("figures/herbivoryXdensity_fig2.pdf", fig2, device = "pdf", useDingbats = FALSE)
+
+tiff(filename="figures/Fig2.tif",height=5600/2,width=5200,units="px",res=800,compression="lzw")
+fig2
+dev.off()
 
 
 ########################

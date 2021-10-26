@@ -105,6 +105,8 @@ sum <- lt %>% group_by(dummy) %>% summarize(mean = mean(predicted.consumption), 
 ## Model for Figure 4: How does kelp biomass change as a function of urchin biomass and the relative balance between consumption and availability of detritus
 #-------------------------------------------------------
 
+lt <- lt %>% filter(urc.biomass > 0)
+
 lmer4 <- lmer(MAPY ~ urc.biomass * dummy + (1|site) + (1|year), data = lt)
 summary(lmer4)
 modelassump(lmer4)
@@ -127,18 +129,27 @@ summary(glmerTMB4)
   DHARMa::testDispersion(temp)
   DHARMa::testTemporalAutocorrelation(simulationOutput = temp, time = lt$year)
   modelassump(glmerTMB4)
+  plot(residuals(glmerTMB4)~ scale(log(urc.biomass)), lt)
 
+  
+  lt$urc.biomass.log <- log(lt$urc.biomass) # log transform!!!
+  glmerTMB4.logtrans <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass.log) * dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+  summary(glmerTMB4.logtrans)
+  temp <- DHARMa::simulateResiduals(glmerTMB4.logtrans)
+  plot(temp)
+  modelassump(glmerTMB4.logtrans)
 
-glmerTMB4.sqrt <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass) * dummy + (1|site) , family = Gamma(link = "sqrt"), data = lt)
+  
+glmerTMB4.sqrt <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass.log) * dummy + (1|site) , family = Gamma(link = "sqrt"), data = lt)
 summary(glmerTMB4.sqrt)
 
 anova(glmerTMB4, glmerTMB4.sqrt)
 
-glmerTMB4.1.d <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass) + dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+glmerTMB4.1.d <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass.log) + dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
 summary(glmerTMB4.1.d)
 modelassump(glmerTMB4.1.d)
 
-glmerTMB4.1.e <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass) + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+glmerTMB4.1.e <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass.log) + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
 summary(glmerTMB4.1.e)
 modelassump(glmerTMB4.1.e)
 
@@ -151,12 +162,12 @@ anova(glmerTMB4, glmerTMB4.1.d)
 
 pl <- c(
   `(Intercept)` = "Intercept",
-  `scale(urc.biomass)` = "Urchin biomass", 
+  `scale(urc.biomass.log)` = "log(Urchin biomass)", 
   `dummyDetritus >= Consumption` = "Detritus >=\nConsumption", 
-  `scale(urc.biomass):dummyDetritus >= Consumption` = "Urchin biomass X\n Detritus >= Consumption"
+  `scale(urc.biomass.log):dummyDetritus >= Consumption` = "log(Urchin biomass) X\n Detritus >= Consumption"
 )
 
-sjPlot::tab_model(glmerTMB4, glmerTMB4.1.d, glmerTMB4.1.f, glmerTMB4.1.e, 
+sjPlot::tab_model(glmerTMB4.logtrans, glmerTMB4.1.d, glmerTMB4.1.f, glmerTMB4.1.e, transform = "exp", 
                   show.aic = T,
                   show.icc = F, 
                   show.dev = T, 
@@ -166,14 +177,14 @@ sjPlot::tab_model(glmerTMB4, glmerTMB4.1.d, glmerTMB4.1.f, glmerTMB4.1.e,
                   dv.labels = c("", "", "", ""), file = here::here("figures/", "fig4modeltable.html"))
 
 
-cand.models <- list(glmerTMB4, glmerTMB4.1.d, glmerTMB4.1.e, glmerTMB4.1.f)
+cand.models <- list(glmerTMB4.logtrans, glmerTMB4.1.d, glmerTMB4.1.e, glmerTMB4.1.f)
 AICcmodavg::aictab(cand.set = cand.models)
 
 newdat <- ggeffects::ggpredict(glmerTMB4, terms = c("urc.biomass", "dummy"))
 plot(newdat)
 
-
-
+newdat <- ggeffects::ggpredict(glmerTMB4.logtrans, terms = c("urc.biomass.log", "dummy"))
+plot(newdat)
 #---------------------------------------------
 ## Figure 4
 #---------------------------------------------
@@ -181,41 +192,53 @@ plot(newdat)
 # 2 panel plot with (a) the relationship between kelp biomass and urchin biomass with points colored by if consumption > detritus, and fit with the model between kelp biomass and urchin biomass. Panel b is the boxplot showing that kelp biomass is less when detritus < consumption. 
 
 
-p1 <- ggplot(lt, aes(x = urc.biomass, y = MAPY))+
-  geom_jitter(colour="white",aes(fill=dummy, shape = dummy), alpha = 0.5, size = 2)+
+p1 <-  lt %>% 
+  filter(urc.biomass > 0) %>%
+ggplot(aes(x = urc.biomass, y = MAPY))+
+  geom_jitter(colour="white",aes(fill=dummy, shape = dummy), alpha = 0.5, size = 2, show.legend = F)+
   scale_shape_manual(values = c(24,21)) +
   scale_fill_manual(values = c("#272593", "#35753d"))+
-  labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), color = "")+
-  geom_line(data = newdat, aes(x = x, y = predicted, color = group, linetype = group), show.legend = F, lwd = 1)+
-  geom_ribbon(data = newdat, aes(x = x, y = predicted, ymin = conf.low, ymax = conf.high, group = group), alpha = .1) +
+  labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = expression(paste("Kelp biomass (g m"^"-2"*")")), color = "")+
+  geom_line(data = newdat, aes(x = exp(x), y = predicted, color = group, linetype = group), show.legend = F, lwd = 1)+
+  geom_ribbon(data = newdat, aes(x = exp(x), y = predicted, ymin = conf.low, ymax = conf.high, group = group), alpha = .1, show.legend = F) +
   scale_color_manual(values = c("#272593", "#35753d"))+
   scale_linetype_manual(values = c(1,4))+
   theme_classic()+
-  theme(legend.position = c(0.75,0.9), 
-        legend.background = element_rect(fill = "white", color = "black"),
-        legend.title = element_blank())+
-  coord_cartesian(ylim = c(0, 25000))
+  theme(legend.position = "none")+
+  #coord_cartesian(ylim = c(0, 25000))+
+  theme(axis.title.x= element_text(color= "black", size=12),
+        axis.title.y= element_text(color= "black", size=12), 
+        axis.text=element_text(size=10))
 
 p2 <- ggplot(lt, aes(x = dummy, y = MAPY))+
-  geom_jitter(colour="white",aes(fill=dummy, shape = dummy, alpha=0.5), size = 2)+
+  geom_jitter(colour="white",aes(fill=dummy, shape = dummy), size = 2, alpha=0.5)+
   scale_shape_manual(values = c(24,21)) +
   scale_fill_manual(values = c("#272593", "#35753d"))+
-  geom_boxplot(outlier.shape = NA, alpha = 0.75,aes(fill=dummy))+
-  labs(x = "", y = "", color = "")+
+  geom_boxplot(outlier.shape = NA, alpha = 0.75,aes(fill=dummy), show.legend = F)+
+  labs(x = "", y = "")+
   scale_x_discrete(labels = c("Detritus <\n Consumption", "Detritus >=\n Consumption"))+
   scale_y_continuous(breaks = seq(0, 25000, by = 5000))+
   theme_classic()+
+  theme(legend.position = c(0.31,0.8),
+        legend.background = element_rect(fill = "white", color = "black"),
+        legend.title = element_blank())+
   theme(axis.text.y = element_blank())+
-  coord_cartesian(ylim = c(0, 25000)) +
-  theme(legend.position = "none")
+  coord_cartesian(ylim = c(0, 25000))+
+  theme(axis.title.x= element_text(color= "black", size=12),
+        axis.title.y= element_text(color= "black", size=12), 
+        legend.text=element_text(size=8), 
+        axis.text=element_text(size=10))
 
-fig4 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 1), labels = "AUTO")
-# fig5
+fig4 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 1), labels = "auto")
+fig4
+# fig4
 
 ggsave(here("figures", "kelpxurc.png"), fig4, device = "png", width = 10, height = 5)
 ggsave(here("figures", "kelpxurc.pdf"), fig4, device = "pdf", width = 8, height = 4, useDingbats = FALSE)
 
-
+tiff(filename="figures/Fig4.tif",height=5600/2,width=5200,units="px",res=800,compression="lzw")
+fig4
+dev.off()
 
 
 #-----------------------------------------------------
@@ -259,6 +282,8 @@ lmer6 <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2)
 summary(lmer6)
 modelassump(lmer6)
 
+plot(residuals(lmer6)~exp(per.diff), lt2)
+
 pl <- c(
   `(Intercept)` = "Intercept",
   per.diff = "Proportional difference\nconsumption and detrital supply"
@@ -283,20 +308,45 @@ f5 <- lt2 %>%
   scale_color_manual(values = c("gray", "black"))+
   scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 9, name = "Greens"), trans = "log10")+geom_line(data = newdat, aes(x = x, y = predicted))+
   geom_ribbon(data = newdat, aes(x = x, ymin = conf.low, ymax = conf.high, y = predicted), alpha = .2) +
-  # geom_line(data = newdat, aes(x = per.diff, y = LC), lty = 4)+
-  # geom_line(data = newdat, aes(x = per.diff, y = UC), lty = 4)+
   geom_hline(yintercept = 0, lty = 3)+
   geom_vline(xintercept = 0, lty = 3)+
-  labs(x = "Proportional difference between\nconsumption and detrial supply rate", 
-       y = "delta Kelp biomass", 
-       size = "Urchin biomass\ndensity", 
+  labs(x = "Proportional difference between\nconsumption and detrital supply rate", 
+       y = "Annual change in kelp biomass", 
+       size = "Urchin biomass", 
        color = "", 
        fill = "Kelp biomass\nin year t")+
-  annotate(x = c(-0.5, -0.5, 0.5, 0.5), y = c(15000, -15000, 15000, -15000), geom = "text", label = c("Kelp increases\nConsumption < detrital supply", "Kelp decreases\nConsumption < detrital supply", "Kelp increases\nConsumption > detrital supply", "Kelp decreases\nConsumption > detrial supply"))+
-  ggpubr::theme_pubr(legend = "right")
+  annotate(x = c(-0.5, -0.5, 0.5, 0.5), y = c(15000, -15000, 15000, -15000), geom = "text", label = c("Kelp increases\nConsumption < detrital supply", "Kelp decreases\nConsumption < detrital supply", "Kelp increases\nConsumption > detrital supply", "Kelp decreases\nConsumption > detrial supply"), size = 3.75)+
+  ggpubr::theme_pubr(legend = "right")+
+  theme(axis.title.x= element_text(color= "black", size=14),
+        axis.title.y= element_text(color= "black", size=14), 
+        legend.text=element_text(size=10), 
+        legend.title = element_text(size = 12), 
+        axis.text=element_text(size=12))
+
+f5
 
 ggsave(here("figures", "perdiffXdeltaK.png"), f5, device = "png", width = 10.63, height = 7.53)
 ggsave(here("figures", "perdiffXdeltaK.pdf"), f5, device = "pdf", useDingbats = FALSE, width = 10.63, height = 7.53)
+
+tiff(filename="figures/Fig5.tif",height=5200,width=6500,units="px",res=800,compression="lzw")
+f5
+dev.off()
+
+
+
+temp <- lt2 %>% filter(per.diff < 0) %>% 
+  mutate(temp = ifelse(deltaK > 100, "positive", 
+                       "negative")) %>%
+  group_by(temp) %>%
+  summarize(count = n(), 
+            deltaK = mean(deltaK))
+
+lt2 %>% 
+  group_by(dummy2) %>% 
+  filter(deltaK > 0) %>%
+  summarize(count = n())
+
+hist(temp$deltaK)
 
 
 #------------------------------------------------------
