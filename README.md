@@ -1,11 +1,14 @@
-# Rennick-2019-urchin-grazing
-Kelp consumption trials in May and summer 2019
+# Detrial supply suppresses deforestation to maintain healthy kelp forest ecosystems
 
-*Predicting Herbivory Rate of Red and Purple Sea Urchins on Giant Kelp in the Santa Barbara Channel as a function of density and available detrital supply*
+**Mae Rennick\*, Bartholomew DiFiore\*, Joseph Curtis, Daniel Reed, and Adrian Stier**  
+\* Equal contributors
 
-This repository houses code and data related to a manuscript (XXXX) that explores how the density  of purple urchins influences their herbivory rate and collective herbivory pressure within coastal kelp forests. Using both observational data gathered from 40 transects in the Santa Barbara Channel and experimental data collected from lab-based herbivory trials, we 1) produced 4 model predictions to represent the relationships between purple and red urchin density, and herbivory rate, 2) applied these model preictions to the observational data collected by the LTER in order to predict herbivory pressure through time and space, within the Santa Barbara Channel, and 3) relate those model estimates of herbivory pressure to observed trends in kelp biomass and investiage how available detrital supply may be influencing the liklihood of an ecocystem transition from a kelp-domianted state to an urchin- dominated state as the result of herbivory pressure.
+This repository houses code and data related to [Rennick et al. 20XX](insert link to published manuscript here)
 
-This repo is maintained by Mae Rennick (GitHub: [@maerennick](https://github.com/maerennick)) at the University of California, Santa Barbara in the Department of Ecology, Evolution, & Marine Biology.
+## Abstract
+The biomass of primary producers is ultimately determined by the rate at which they grow and how quickly they die or are eaten. In some instances, consumers disturb communities, dramatically reducing primary producer biomass and driving communities towards alternative ecosystem states. Yet the mechanisms behind consumer-driven disturbances remain unclear. Here, we tested how changes in the biomass and foraging habits of an important group of marine herbivores— sea urchins— triggers disturbance to a foundation species— giant kelp (Macrocystis pyrifera)— on temperate rocky reefs. Specifically, we demonstrated that urchin foraging rates increased linearly with urchin biomass in mesocosm foraging trials. We applied these results to 21 years of spatially explicit observational data on kelp community dynamics to test the long-standing hypothesis that deforestation of kelp communities occurs when the consumptive capacity of urchin populations exceeds the production of kelp detritus. We found a 50-fold reduction in giant kelp biomass when the consumptive capacity of sea urchins exceeded detrital production. Furthermore, the annual change in kelp biomass was dissociated from urchin biomass when detrital kelp was plentiful but as detrital supply became more limited, the annual change in kelp became increasingly negative. Our results suggest that the balance between detrital production and the consumptive capacity of sea urchins is critical to predicting when and where consumers are likely to force state transitions in kelp forest ecosystems.
+
+This repo is maintained by Bart DiFiore (GitHub: [@bartdifiore](https://github.com/bartdifiore)) at the University of California, Santa Barbara in the Department of Ecology, Evolution, & Marine Biology.
 
 # Code
 
@@ -17,20 +20,8 @@ ggmapping.R | This scrip generates figure 3 (panel a) by mapping the California 
 spatio-temporal.R | This script generates figure 3 (pannels b and c) 4 and 5. Figure 3 was constructed by ploting predicted consumption derived from the denisty analysis (density_analysis.R) of red and purple urchins thorough time across 11 sites in the Santa Barbara Channel by applying it to the observational data reported by the Santa Barbara LTER for red and purple urchin density (Annual_All_Species_Biomass_at_transect.csv). This data was then used to track the realtionship through time and space through a generated mixed effects model. Additionally this script utilizes observational data of kelp biomass to track living kelp biomass thorough time across 11 sites in the Santa Barbara Channel which was extracted from observational data reported by the Santa Barbara LTER. To construct figure 4, we then plotted the LTER estimates of kelp biomass and combined urchin biomass at each site, and then incoorperated  available detrital supply in panel b to track the relationship between available detrital supply, predicted herbivory pressure, and live kelp biomass. Lastly, we used this data to compare changes in kelp biomass at all 11 sites when detrital supply was higher and lower than predictied consumption rate to generate figure 5. 
 spatio_temporal_maps.R | This script maps predicted herbivory pressure across nine coastal sites in the Santa Barbara Channel. It visually represents strength of predicted herbivory pressure determined by the size and density analysis of red and purple urchins paired with the observational size and density data from the LTER, across time and space to generate supplementary figure A1.
 
+# Add links to data here
 
-# LTER Data 2020
-*/data/LTER*
-
-Santa Barbara Coastal LTER and D. Reed. 2020. SBC LTER: Reef: Long-term experiment: biomass of kelp forest species, ongoing since 2008 ver 6. Environmental Data Initiative. 
-
-Data files exceed 100 MB, but can be downloaded from the Santa Barbara Coastal Long Term Ecological Research webpage at: https://doi.org/10.6073/pasta/47db4ee01f516b0a47b7c585fd552645 
-
-# LTER Data 2021
-*/data/LTER*
-
-Santa Barbara Coastal LTER, D. Reed, and R. Miller. 2021. SBC LTER: Reef: Annual time series of biomass for kelp forest species, ongoing since 2000 ver 10. Environmental Data Initiative.
-
-Data files exceed 100 MB, but can be downloaded from the Santa Barbara Coastal Long Term Ecological Research webpage at:https://doi.org/10.6073/pasta/f1cf070648d7654ada052835afb2cfe9 (Accessed 2021-03-16).
 
 
 
