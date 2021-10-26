@@ -1,0 +1,449 @@
+#-----------------------------------------------------------------
+## Setup and data cleaning
+#-----------------------------------------------------------------
+
+library(here)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lme4)
+library(lmerTest)
+library(glmmTMB)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+source(here("analysis/", "Functions.R"))
+source(here("analysis/", "2_density_analysis.R"))
+
+#We are going to apply the models extracted from the size and density analysis to 9 LTER coastal sites. We are going to track urchin density through time and apply herbivory pressure estiamtes to each site based on our findings. We additionally are incoorperating observational data realting to detriatal supply to test its bearing on the amount of kelp biomass lost in a given area. 
+
+betap <-as.vector(coef(lm1)[1])
+betar<-as.vector(coef(lm1.r)[1])
+
+purple.fun <- function(biomass){
+  betap*biomass
+} # this is the herbivory rate model prediction formed from the density analysis for purple urchins
+
+red.fun <- function(biomass){
+  betar*biomass} # this is the herbivory rate model prediction formed from the density analysis for red urchins
+
+
+lt <- read.csv("data/survey_data/Annual_All_Species_Biomass_at_transect_20210108.csv", stringsAsFactors = F,na.strings ="-99999") %>% #LTER data density estimations collected from 50 transects across 11 sites between 2000-2018 in the Santa Barbara Channel.
+  dplyr::select("YEAR", "MONTH", "SITE", "TRANSECT", "SP_CODE", "WM_GM2") %>%
+  filter(SP_CODE %in% c("MAPY", "SFL", "SPL"))%>% #filtering the data to only include giant kelp, purple urchins, and red urchins
+  filter(SITE != "SCTW", SITE != "SCDI") %>% 
+  #Filtering out island sites. This study focuses on costal sites.
+  rename_all(tolower) %>% 
+  group_by(year, month, site, transect, sp_code) %>%
+  spread(sp_code, wm_gm2) %>%
+  mutate(SFL.pred = red.fun(SFL),
+         SPL.pred = purple.fun(SPL), 
+         predicted.consumption = (SPL.pred + SFL.pred))
+
+
+# Ok so idea: Part of what is complicated about urchin foraging is that they can be both detritovors and herbivores. if production of kelp detritus exceeds consumption rate then we wouldn't expect any change in standing stock of kelp biomass. BUT if consumption rate exceeds detritus production then we might see shifts in the standing stock of kelp. Based on Christie's paper (and some analysis of LTER data) we should be able to estimate summer production of kelp detritus (and spectifically the detritus that lands on the seafloor). We can then examine trends in the time series to look for periods when urchin consumption rate exceeds kelp detritus production to look for declines in kelp biomass.
+
+# The NPP survey data includes an estimate of average % biomass lost on a NPP transect for each monthly survey as plants, fronds, exudates, cut tissue (i.e. prop cuts), and blade scenescence. I'm going to calculate a regional summer time average from the NPP data collected at MOHK, AQUE, and ABUR to estimate the fraction of kelp biomss lost as fronds and blades (mass per day). I will then use this estimate to estimate detrital production rates along each of the LTER core transects. 
+
+# get NPP data
+
+npp <- read.csv("data/survey_data/NPP_ALL_YEARS_seasonal_with_MC_stderr.csv", stringsAsFactors = F,na.strings ="-99999") %>%
+  rename_all(tolower) %>%
+  dplyr::select(year, season, site, plnt_dns, frnd_dns, dry_wt,f, p, d, c, b, l) %>% 
+  filter(season == "3-Summer") %>%
+  mutate(det.r = f + b)
+
+av1 <- npp %>% summarize(ave = mean(det.r, na.rm = T), 
+                         sd = sd(det.r, na.rm = T)) # so approximately 2% of total biomass is lost as fronds and blades per day!
+av <- av1[1,1]
+sd <- av1[1,2]
+
+lt <- lt %>%
+  drop_na(MAPY) %>%
+  mutate(detritus.production = av * MAPY, 
+         dummy = as.factor(ifelse(detritus.production >= predicted.consumption, "Detritus >= Consumption", "Detritus < Consumption")), 
+         urc.biomass = SPL + SFL) %>%
+  filter(urc.biomass > 0)
+
+
+#-------------------------------------------------------
+## Summary stats for paper
+#-------------------------------------------------------
+
+# comparison of kelp biomass across all sites/years with kelp biomass at sites with urchin biomass in the 90% percentile
+
+1-(mean(lt$MAPY[lt$urc >= quantile(lt$urc, probs = .9)]) / mean(lt$MAPY[lt$urc < quantile(lt$urc, probs = .9)]))
+
+
+# means and sd of kelp
+sum <- lt %>% group_by(dummy) %>% summarize(mean = mean(MAPY), sd = sd(MAPY))
+
+#percent difference in mean kelp biomass between consumption > detritus and visa versa
+(sum[1,2] - sum[2,2]) / sum[1,2]
+
+# is this just due to low detritus/low kelp?
+sum <- lt %>% group_by(dummy) %>% summarize(mean = mean(predicted.consumption), sd = sd(predicted.consumption))
+(sum[1,2] - sum[2,2]) / sum[1,2] # consumption rates are 77% higher when consumption exceeds detritus. There NO! 
+
+
+#-------------------------------------------------------
+## Model for Figure 4: How does kelp biomass change as a function of urchin biomass and the relative balance between consumption and availability of detritus
+#-------------------------------------------------------
+
+lt <- lt %>% filter(urc.biomass > 0)
+
+lmer4 <- lmer(MAPY ~ urc.biomass * dummy + (1|site) + (1|year), data = lt)
+summary(lmer4)
+modelassump(lmer4)
+
+lmer4.1 <- lmer(MAPY ~ urc.biomass + dummy + (1|site) + (1|year), data = lt)
+summary(lmer4.1)
+modelassump(lmer4.1)
+
+lt$MAPY1 <- lt$MAPY+1
+glm4.1.a <- glm(MAPY1 ~ urc.biomass + dummy, data = lt, family = Gamma(link = "log"))
+summary(glm4.1.a)
+modelassump(glm4.1.a)
+
+
+glmerTMB4 <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass) * dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+summary(glmerTMB4)
+  temp <- DHARMa::simulateResiduals(glmerTMB4)
+  plot(temp)
+  DHARMa::testZeroInflation(temp)
+  DHARMa::testDispersion(temp)
+  DHARMa::testTemporalAutocorrelation(simulationOutput = temp, time = lt$year)
+  modelassump(glmerTMB4)
+  plot(residuals(glmerTMB4)~ scale(log(urc.biomass)), lt)
+
+  
+  lt$urc.biomass.log <- log(lt$urc.biomass) # log transform!!!
+  glmerTMB4.logtrans <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass.log) * dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+  summary(glmerTMB4.logtrans)
+  temp <- DHARMa::simulateResiduals(glmerTMB4.logtrans)
+  plot(temp)
+  modelassump(glmerTMB4.logtrans)
+
+  
+glmerTMB4.sqrt <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass.log) * dummy + (1|site) , family = Gamma(link = "sqrt"), data = lt)
+summary(glmerTMB4.sqrt)
+
+anova(glmerTMB4, glmerTMB4.sqrt)
+
+glmerTMB4.1.d <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass.log) + dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+summary(glmerTMB4.1.d)
+modelassump(glmerTMB4.1.d)
+
+glmerTMB4.1.e <- glmmTMB::glmmTMB(MAPY1 ~ scale(urc.biomass.log) + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+summary(glmerTMB4.1.e)
+modelassump(glmerTMB4.1.e)
+
+glmerTMB4.1.f <- glmmTMB::glmmTMB(MAPY1 ~ dummy + (1|site) + (1|year) , family = Gamma(link = "log"), data = lt)
+summary(glmerTMB4.1.f)
+modelassump(glmerTMB4.1.f)
+
+AIC(glmerTMB4, glmerTMB4.1.d, glmerTMB4.1.e, glmerTMB4.1.f)
+anova(glmerTMB4, glmerTMB4.1.d)
+
+pl <- c(
+  `(Intercept)` = "Intercept",
+  `scale(urc.biomass.log)` = "log(Urchin biomass)", 
+  `dummyDetritus >= Consumption` = "Detritus >=\nConsumption", 
+  `scale(urc.biomass.log):dummyDetritus >= Consumption` = "log(Urchin biomass) X\n Detritus >= Consumption"
+)
+
+sjPlot::tab_model(glmerTMB4.logtrans, glmerTMB4.1.d, glmerTMB4.1.f, glmerTMB4.1.e, transform = "exp", 
+                  show.aic = T,
+                  show.icc = F, 
+                  show.dev = T, 
+                  show.loglik = T, 
+                  show.ngroups = F, 
+                  pred.labels = pl, 
+                  dv.labels = c("", "", "", ""), file = here::here("figures/", "fig4modeltable.html"))
+
+
+cand.models <- list(glmerTMB4.logtrans, glmerTMB4.1.d, glmerTMB4.1.e, glmerTMB4.1.f)
+AICcmodavg::aictab(cand.set = cand.models)
+
+newdat <- ggeffects::ggpredict(glmerTMB4, terms = c("urc.biomass", "dummy"))
+plot(newdat)
+
+newdat <- ggeffects::ggpredict(glmerTMB4.logtrans, terms = c("urc.biomass.log", "dummy"))
+plot(newdat)
+#---------------------------------------------
+## Figure 4
+#---------------------------------------------
+
+# 2 panel plot with (a) the relationship between kelp biomass and urchin biomass with points colored by if consumption > detritus, and fit with the model between kelp biomass and urchin biomass. Panel b is the boxplot showing that kelp biomass is less when detritus < consumption. 
+
+
+p1 <-  lt %>% 
+  filter(urc.biomass > 0) %>%
+ggplot(aes(x = urc.biomass, y = MAPY))+
+  geom_jitter(colour="white",aes(fill=dummy, shape = dummy), alpha = 0.5, size = 2, show.legend = F)+
+  scale_shape_manual(values = c(24,21)) +
+  scale_fill_manual(values = c("#272593", "#35753d"))+
+  labs(x = expression(paste("Combined urchin biomass (g m"^"-2"*")")), y = expression(paste("Kelp biomass (g m"^"-2"*")")), color = "")+
+  geom_line(data = newdat, aes(x = exp(x), y = predicted, color = group, linetype = group), show.legend = F, lwd = 1)+
+  geom_ribbon(data = newdat, aes(x = exp(x), y = predicted, ymin = conf.low, ymax = conf.high, group = group), alpha = .1, show.legend = F) +
+  scale_color_manual(values = c("#272593", "#35753d"))+
+  scale_linetype_manual(values = c(1,4))+
+  theme_classic()+
+  theme(legend.position = "none")+
+  #coord_cartesian(ylim = c(0, 25000))+
+  theme(axis.title.x= element_text(color= "black", size=12),
+        axis.title.y= element_text(color= "black", size=12), 
+        axis.text=element_text(size=10))
+
+p2 <- ggplot(lt, aes(x = dummy, y = MAPY))+
+  geom_jitter(colour="white",aes(fill=dummy, shape = dummy), size = 2, alpha=0.5)+
+  scale_shape_manual(values = c(24,21)) +
+  scale_fill_manual(values = c("#272593", "#35753d"))+
+  geom_boxplot(outlier.shape = NA, alpha = 0.75,aes(fill=dummy), show.legend = F)+
+  labs(x = "", y = "")+
+  scale_x_discrete(labels = c("Detritus <\n Consumption", "Detritus >=\n Consumption"))+
+  scale_y_continuous(breaks = seq(0, 25000, by = 5000))+
+  theme_classic()+
+  theme(legend.position = c(0.31,0.8),
+        legend.background = element_rect(fill = "white", color = "black"),
+        legend.title = element_blank())+
+  theme(axis.text.y = element_blank())+
+  coord_cartesian(ylim = c(0, 25000))+
+  theme(axis.title.x= element_text(color= "black", size=12),
+        axis.title.y= element_text(color= "black", size=12), 
+        legend.text=element_text(size=8), 
+        axis.text=element_text(size=10))
+
+fig4 <- cowplot::plot_grid(p1, p2, align = "h", rel_widths = c(1, 1), labels = "auto")
+fig4
+# fig4
+
+ggsave(here("figures", "kelpxurc.png"), fig4, device = "png", width = 10, height = 5)
+ggsave(here("figures", "kelpxurc.pdf"), fig4, device = "pdf", width = 8, height = 4, useDingbats = FALSE)
+
+tiff(filename="figures/Fig4.tif",height=5600/2,width=5200,units="px",res=800,compression="lzw")
+fig4
+dev.off()
+
+
+#-----------------------------------------------------
+## Summary statistics
+#-----------------------------------------------------
+
+mean(lt$predicted.consumption, na.rm =T)
+sd(lt$predicted.consumption, na.rm =T)
+range(lt$predicted.consumption)
+
+#temporal vs. spatial variation
+
+lt %>% group_by(site) %>% 
+  summarize(cv.space = sd(predicted.consumption)/mean(predicted.consumption)) %>%
+  summarize(mean(cv.space), sd(cv.space))
+
+lt %>% group_by(year) %>% 
+  summarize(cv.time = sd(predicted.consumption)/mean(predicted.consumption)) %>%
+  summarize(mean(cv.time), sd(cv.time))
+
+#------------------------------------------------------
+## Ratio dependent plots 
+#------------------------------------------------------
+
+lt2 <- lt %>%
+  mutate(ratio = predicted.consumption / detritus.production, 
+         diff = predicted.consumption - detritus.production, 
+         per.diff = (predicted.consumption - detritus.production) / (predicted.consumption + detritus.production)) %>%
+  arrange(site, transect, year) %>%
+  ungroup() %>%
+  group_by(site, transect) %>%
+  arrange(site,transect, year) %>%
+  mutate(deltaK = MAPY - lag(MAPY, order_by = year)) %>% 
+  filter(deltaK != 0 & MAPY != 0) %>%
+  arrange(site,transect, year)
+
+lt2$dummy2 <- ifelse(lt2$urc.biomass >= 668, "Urchin biomass >= 668", "Urchin biomass < 668")
+
+
+lmer6 <- lmer(deltaK ~ per.diff + (1|site) + (1|year), lt2)
+summary(lmer6)
+modelassump(lmer6)
+
+plot(residuals(lmer6)~exp(per.diff), lt2)
+
+pl <- c(
+  `(Intercept)` = "Intercept",
+  per.diff = "Proportional difference\nconsumption and detrital supply"
+)
+
+sjPlot::tab_model(lmer6, 
+                  show.aic = T, 
+                  show.icc = F, 
+                  show.dev = T, 
+                  show.loglik = T, 
+                  show.ngroups = F, 
+                  pred.labels = pl, 
+                  dv.labels = c(""), file = here::here("figures/", "fig5modeltable.html"))
+
+
+newdat <- ggeffects::ggpredict(lmer6, terms = "per.diff", type = "fe")
+
+f5 <- lt2 %>%
+  ggplot(aes(x = per.diff, y = deltaK))+
+  #scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 11, name = "RdBu"))+
+  geom_point(aes(size = urc.biomass, fill = MAPY, color = dummy2), pch = 21)+
+  scale_color_manual(values = c("gray", "black"))+
+  scale_fill_gradientn(colors = RColorBrewer::brewer.pal(n = 9, name = "Greens"), trans = "log10")+geom_line(data = newdat, aes(x = x, y = predicted))+
+  geom_ribbon(data = newdat, aes(x = x, ymin = conf.low, ymax = conf.high, y = predicted), alpha = .2) +
+  geom_hline(yintercept = 0, lty = 3)+
+  geom_vline(xintercept = 0, lty = 3)+
+  labs(x = "Proportional difference between\nconsumption and detrital supply rate", 
+       y = "Annual change in kelp biomass", 
+       size = "Urchin biomass", 
+       color = "", 
+       fill = "Kelp biomass\nin year t")+
+  annotate(x = c(-0.5, -0.5, 0.5, 0.5), y = c(15000, -15000, 15000, -15000), geom = "text", label = c("Kelp increases\nConsumption < detrital supply", "Kelp decreases\nConsumption < detrital supply", "Kelp increases\nConsumption > detrital supply", "Kelp decreases\nConsumption > detrial supply"), size = 3.75)+
+  ggpubr::theme_pubr(legend = "right")+
+  theme(axis.title.x= element_text(color= "black", size=14),
+        axis.title.y= element_text(color= "black", size=14), 
+        legend.text=element_text(size=10), 
+        legend.title = element_text(size = 12), 
+        axis.text=element_text(size=12))
+
+f5
+
+ggsave(here("figures", "perdiffXdeltaK.png"), f5, device = "png", width = 10.63, height = 7.53)
+ggsave(here("figures", "perdiffXdeltaK.pdf"), f5, device = "pdf", useDingbats = FALSE, width = 10.63, height = 7.53)
+
+tiff(filename="figures/Fig5.tif",height=5200,width=6500,units="px",res=800,compression="lzw")
+f5
+dev.off()
+
+
+
+temp <- lt2 %>% filter(per.diff < 0) %>% 
+  mutate(temp = ifelse(deltaK > 100, "positive", 
+                       "negative")) %>%
+  group_by(temp) %>%
+  summarize(count = n(), 
+            deltaK = mean(deltaK))
+
+lt2 %>% 
+  group_by(dummy2) %>% 
+  filter(deltaK > 0) %>%
+  summarize(count = n())
+
+hist(temp$deltaK)
+
+
+#------------------------------------------------------
+## Time series plot
+#------------------------------------------------------
+
+
+# time series
+
+t1 <- lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(biomass = mean(MAPY, na.rm = T)) %>% #adding a biomass column
+  ggplot(aes(x = year, y = biomass))+
+  geom_line(aes(color = site), show.legend = F)+
+  scale_color_manual(values = c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6'))+
+  stat_summary(fun = mean, geom = "line", lwd = 2, alpha = 0.75)+
+  labs(y = expression(paste("Giant kelp biomass (g m"^"-2"*")")), x = "")+
+  theme_classic()
+
+t2 <- lt %>%
+  group_by(year,site) %>%
+  summarize(predicted.consumption = mean(predicted.consumption, na.rm = T)) %>%
+  ggplot(aes(x = year, y = predicted.consumption))+ #average consumption across sites
+  geom_line(aes(color = site), show.legend = F)+
+  scale_color_manual(values = c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6'))+
+  stat_summary(fun = mean, geom = "line", lwd = 2, alpha = 0.75)+
+  labs(y = expression(paste("Predicted kelp consumption (g m"^"-2"*"d"^"-1"*")")), x = "")+
+  theme_classic()
+
+fig4 <- cowplot::plot_grid(t1, t2, align = "v", nrow = 2)
+
+ggsave(here("figures", "timeseries.pdf"), fig4, units = "in", width = 12, height = 6, useDingbats = FALSE)
+
+
+#----------------------------------------------------
+## Faceted time series plots
+#----------------------------------------------------
+
+
+lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(kelp.biomass = mean(MAPY, na.rm = T), 
+            urc.biomass = mean(urc.biomass, na.rm = T)) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site)) %>%
+  ggplot(aes(x = year, y = biomass))+
+  geom_line(aes(color = site), show.legend = F)+
+  facet_grid(species ~ site , scales = "free")
+
+
+means <- lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(MAPY = mean(MAPY, na.rm = T), 
+            urc.biomass = mean(urc.biomass, na.rm = T)) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site))
+
+plot <- lt %>% #LTER data 
+  group_by(year, site, transect) %>%
+  select(year, site, transect, MAPY, urc.biomass) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site, transect)) %>%
+  ggplot(aes(x = year, y = biomass))+
+  geom_line(aes(group = transect), show.legend = F, alpha = 0.5)+
+  geom_line(data = means, aes( x = year, y = biomass, color = site), lwd = 1.5, alpha = 0.75, show.legend = F)+
+  facet_grid(species ~ site , scales = "free")+
+  theme_bw()+
+  theme(panel.grid = element_blank())
+
+
+ggsave(filename = here::here("figures/", "facet_by_site_species.pdf"), plot = plot, device = "pdf", width = 14, height = 6)
+
+scale2 <- function(x, na.rm = FALSE) (x - mean(x, na.rm = na.rm)) / sd(x, na.rm)
+
+plot2 <- lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(kelp.biomass = mean(MAPY, na.rm = T),
+            urc.biomass = mean(urc.biomass, na.rm = T)) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site)) %>%
+  group_by(site, species) %>%
+  mutate(biomass2 = as.numeric(scale2(biomass))) %>%
+  ggplot(aes(x = year, y = biomass2))+
+  geom_line(aes(color = species), lwd = 1)+
+  geom_point(aes(color = species), lwd = 1.2)+
+  scale_color_manual(values = c("#006d2c", "#810f7c"))+
+  facet_wrap(~ site)+
+  labs(x = "", y = "Biomass\n(z-scored by species across years within sites)")+
+  theme_bw()+
+  theme(panel.grid = element_blank())
+
+
+ggsave(filename = here::here("figures/", "facet_by_site_zscored.pdf"), plot = plot2, device = "pdf")
+
+
+forplot <- lt %>% #LTER data 
+  group_by(year, site) %>%
+  summarize(kelp.biomass = mean(MAPY, na.rm = T),
+            urc.biomass = mean(urc.biomass, na.rm = T)) %>%
+  pivot_longer(names_to = "species", values_to = "biomass", -c(year, site)) %>%
+  group_by(site, species) %>%
+  mutate(biomass2 = as.numeric(scale2(biomass)))
+
+sites <- unique(forplot$site)
+
+for(i in 1:length(sites)){
+  forplot %>% filter(site == sites[i]) %>%
+    ggplot(aes(x = year, y = biomass2))+
+    geom_line(aes(color = species), lwd = 3, show.legend = F)+
+    geom_point(aes(color = species), size = 4, show.legend = F, pch = 21, fill = "white")+
+    scale_color_manual(values = c("#006d2c", "#810f7c"))+
+    labs(x = "", y = "Biomass")+
+    scale_x_continuous(breaks = c(2000, 2005, 2010, 2015, 2020))+
+    scale_y_continuous(breaks = c(-2, -1, 0, 1, 2, 3))+
+    coord_cartesian(ylim = c(-2, 3))+
+    theme_bw()+
+    theme(panel.grid = element_blank(), text = element_text(size = 30))+
+    ggsave(filename = here::here("figures/", paste("facet_by_site_zscored", sites[i], ".pdf", sep = "")), device = "pdf", useDingbats = FALSE)
+}
