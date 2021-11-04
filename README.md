@@ -1,4 +1,4 @@
-# Detrial supply suppresses deforestation to maintain healthy kelp forest ecosystems
+# Detrital supply suppresses deforestation to maintain healthy kelp forest ecosystems
 
 **Mae Rennick\*, Bartholomew DiFiore\*, Joseph Curtis, Daniel Reed, and Adrian Stier**  
 \* Equal contributors
